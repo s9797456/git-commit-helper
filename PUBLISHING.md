@@ -126,7 +126,7 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 
 ## 8. 上架后：条目信息、徽章与 widget
 
-条目已上线（`api/plugins/34303` 核对）：
+条目已创建（`api/plugins/34303` 核对；注意这是"条目"，不代表已有可安装版本，见下）：
 
 | 字段 | 值 |
 |---|---|
@@ -139,15 +139,31 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 档案（`me-tool / 593259523@qq.com`）不一致 —— 不影响安装与更新，但要统一的话改
 `build.gradle.kts` 的 `pluginConfiguration.vendor { name/email/url }` 后重新发版。
 
-**徽章（GitHub 上用这个）** —— GitHub 会过滤 Markdown 里的 `<script>`，所以 README 只能放图片徽章：
+**徽章（GitHub 上用这个）** —— GitHub 会过滤 Markdown 里的 `<script>`，所以 README 只能放图片徽章。
+`README.md` / `README.zh.md` 现在用的是**静态** Marketplace 徽章 + 下载量徽章 + 协议徽章：
 
 ```markdown
-[![Marketplace version](https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Commit%20Helper-000000?logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
 ```
 
-已加进 `README.md` 与 `README.zh.md`（`v` 与 `d` 两个端点实测 200；`r`（评分）目前取不到，
-等有评分再加）。
+> **为什么不用版本徽章**：`img.shields.io/jetbrains/plugin/v/34303` 现在返回的是
+> `marketplace: invalid response data` —— 因为还没有**已批准**的版本（见下）。
+> 等 `scripts/listing-status.sh` 显示有版本后再换成
+> `https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains` 即可。
+> 评分端点（`r`）在零评分时同样取不到。
+
+**当前状态：条目已建，但还没有可安装的版本。** 用脚本查：
+
+```bash
+scripts/listing-status.sh
+```
+
+它会打印条目信息，并检查 IDE 真正使用的公开更新源
+（`https://plugins.jetbrains.com/plugins/list?pluginId=com.caye.commithelper`）。
+只要这个源还是空的 `<plugin-repository/>`，用户在 IDE 里就搜不到、装不上 ——
+说明**首次上传还没提交，或仍在审核中**（JetBrains 对首次上架会人工审核，通常 1–3 个工作日）。
+
 
 **Widget（需要真实网页）** —— JetBrains 给的 `card`（卡片）与 `install`（安装按钮）两种：
 

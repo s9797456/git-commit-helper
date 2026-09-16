@@ -1,6 +1,6 @@
 # Commit Helper（提交助手）
 
-[![Marketplace 版本](https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Commit%20Helper-000000?logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
 [![下载量](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 

@@ -374,9 +374,14 @@ com.caye.commithelper
       用户提供 token 后**首次推送成功**（凭据只经命令行 HTTP header 传递，不落任何文件、
       不进 `.git/config`），`api.github.com` 核对远端 `main` HEAD 与本地一致。
 
-18. **上架完成与推广物料**：插件已在 JetBrains Marketplace 上线，`api/plugins/34303` 核对到
+18. **上架条目与推广物料**：Marketplace 上**条目已创建**（`api/plugins/34303` 核对到
     `xmlId = com.caye.commithelper`（与包内一致）、名称 Commit Helper、vendor 组织 `me-tool`，
-    页面 <https://plugins.jetbrains.com/plugin/34303-commit-helper>。
+    页面 <https://plugins.jetbrains.com/plugin/34303-commit-helper>），但**尚无已批准版本**：
+    公开更新源 `plugins/list?pluginId=com.caye.commithelper` 仍返回空的 `<plugin-repository/>`，
+    `api/plugins/34303/updates` 为 `[]`，`downloads: 0` —— 即首次上传未提交或仍在审核，
+    用户在 IDE 内还搜不到。为此加了 `scripts/listing-status.sh` 一键查询（条目信息 + 该公开源），
+    并把 README 的版本徽章换成静态徽章：`jetbrains/plugin/v/34303` 在无版本时渲染为
+    `marketplace: invalid response data`，等有版本后再换回（脚本里有提示）。
     - **平台限制导致的做法区分**：GitHub 会过滤 Markdown 里的 `<script>`，所以官方 widget
       （`card` / `install`）不能放 README —— README 用 shields.io 徽章
       （`jetbrains/plugin/v|d/34303`，实测 200；评分端点目前取不到，暂不放），
