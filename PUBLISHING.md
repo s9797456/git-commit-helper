@@ -18,13 +18,13 @@
 > 沙箱里跑 Gradle 需要 `GRADLE_USER_HOME=/Users/sunpengfei/code/deepseek/.gradle-home`；
 > 你自己终端里不需要。
 
-## 1. 发布前必须改（1 处 + 2 个网页字段）
+## 1. 发布前必须做的（工程侧只剩 1 项）
 
-1. `gradle.properties` 里的 `pluginVendorUrl` —— 现在还是占位 `https://github.com/`，
-   会变成 Marketplace 上的 vendor 链接。
-2. Marketplace 网页表单里要填 **Vendor profile**（名称/邮箱/网址）。
-3. **源码地址**（已定：GitHub 公开仓库）：Marketplace 规定"选开源协议就必须给公开源码链接"。
-   本地仓库与首次提交已备好，你只需建仓 + `git push`，见 §6。**这一条不做完无法上架。**
+1. ~~`gradle.properties` 的 `pluginVendorUrl`~~ ✅ 已填 `https://github.com/s9797456/git-commit-help`。
+2. **源码推上 GitHub**：仓库已建好且为空，只差 `git push`（需要你的 token），见 §6。
+   Marketplace 规定"选开源协议就必须给公开源码链接"，**这一条不做完无法上架**。
+3. **网页表单要填**：Vendor profile（名称/邮箱/网址）、License（Apache-2.0 + 源码链接）、
+   Tags（建议 `VCS`/`Git`/`AI`/`Productivity`）、截图（可选但建议）。
 
 ## 2. 签名密钥（已完成，勿重复生成）
 
@@ -91,29 +91,41 @@ intellijPlatform { publishing { channels = listOf("beta") } }
 
 ## 6. 公开源码（Apache-2.0 上架必需）
 
-本地仓库已就绪：`git init -b main` + 首次提交 `f0fe48d`（43 个文件，`build/`、`.gradle/`、
-`.verifier-home/`、`.intellijPlatform/`、`*.pem`、`publish-env.sh` 都已在 `.gitignore` 里，
-没有密钥或大文件进库）。
+仓库已存在，且是**公开空仓库**：<https://github.com/s9797456/git-commit-help>
+（`api.github.com` 查得 `private: false`、`size: 0`、默认分支 `main`）。本地 `origin`
+已指向它，`pluginVendorUrl` 也已填成这个地址；本地有 3 个提交（`f0fe48d` 主体、
+`3af39f3` 发布文档、`d6b203f` vendor 链接），43 个文件，密钥与大目录都在 `.gitignore` 里。
 
-在 GitHub 上建一个**公开空仓库**（不要勾 "Add a README/.gitignore"，避免和本地冲突），然后：
+**只差凭据**：本机没有 `gh`、没有 SSH key、没有 credential helper，keychain 里也没有
+github 条目。首次推送要 GitHub 用户名 + **Personal Access Token**（GitHub 早已不接受账号密码；
+classic token 给 `repo` 权限，或 fine-grained token 给 Contents: Read and write）。
+
+`github.com:443` 只有约 **1/5** 的连接成功率（实测 5 次探测 1 次 200，失败是 75s 超时），
+所以用带重试的方式推：
 
 ```bash
 cd /Users/sunpengfei/code/deepseek/git-commit-helper
-git remote add origin https://github.com/<你的用户名>/git-commit-helper.git
-git push -u origin main
+
+# 可选但推荐：token 存进 macOS keychain，之后不必再输，我这边也能代你推后续提交
+git config --global credential.helper osxkeychain
+
+for i in $(seq 1 10); do
+  git push -u origin main && break
+  echo "第 $i 次失败，重试…"; sleep 3
+done
 ```
 
-网络提示：本机对 `github.com:443` 是**间歇性**可达（实测都解析到 `20.205.243.166`，
-`curl` 有时 200、`git` 常 75s 超时；`api.github.com` 稳定 200）。推失败就多试几次或走代理：
+Token 在 <https://github.com/settings/tokens> 生成。本来就有代理的话直接：
 
 ```bash
-git -c http.proxy=http://127.0.0.1:7890 push -u origin main
+git -c http.proxy=http://127.0.0.1:<端口> push -u origin main
 ```
 
-拿到公开链接后填两处：
+推成功后告诉我，我会用 `api.github.com` 核对 `main` 上的提交，并把链接写进 Marketplace
+上传表单的 **Source code** 字段（vendor 链接已就绪）。
 
-1. `gradle.properties` 的 `pluginVendorUrl`（或改成你的主页）；
-2. Marketplace 上传表单里的 **Source code** 字段。
+> 注意：远端仓库名是 `git-commit-help`（少一个 `er`），本地目录/工程名是 `git-commit-helper`。
+> 不影响功能；若那是建错的仓库名，先在 GitHub 改名（Settings → Repository name），我同步 `origin`。
 
 ## 7. 排查
 
