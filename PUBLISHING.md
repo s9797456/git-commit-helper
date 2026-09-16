@@ -164,6 +164,14 @@ scripts/listing-status.sh
 只要这个源还是空的 `<plugin-repository/>`，用户在 IDE 里就搜不到、装不上 ——
 说明**首次上传还没提交，或仍在审核中**（JetBrains 对首次上架会人工审核，通常 1–3 个工作日）。
 
+**建议补的截图**（在条目页 `Edit` 里上传，比文字描述更能说明问题）：
+
+1. 提交工具窗口：左边勾选了几个文件，右边消息框工具栏上高亮 `Organize Commit Message`
+   （顺带展示它就在原生工具栏里，不是弹窗插件）。
+2. 预览弹窗：生成结果 + 「替换 / 追加 / 取消」三个按钮（体现"不点就不改、不自动提交"）。
+3. 设置页 **Settings | Tools | Commit Helper**：provider、模板、语言开关
+   （体现多厂商 + 本地降级 + 模板可改）。
+
 
 **Widget（需要真实网页）** —— JetBrains 给的 `card`（卡片）与 `install`（安装按钮）两种：
 
