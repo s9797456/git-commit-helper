@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.caye.commithelper</id>
     <name>Commit Helper</name>
-    <vendor email="spf@caye.com" url="https://github.com/">sunpengfei</vendor>
+    <vendor email="593259523@qq.com" url="https://github.com/s9797456/git-commit-helper">me-tool</vendor>
 
     <description><![CDATA[
     Organizes the changes you have checked in the commit panel into a ready-to-commit message:

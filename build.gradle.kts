@@ -97,8 +97,11 @@ intellijPlatform {
         }
 
         vendor {
-            name = "sunpengfei"
-            email = "spf@caye.com"
+            // Must stay in sync with the <vendor> element in src/main/resources/META-INF/plugin.xml:
+            // that element is what actually ends up in the shipped plugin.xml, this block is for
+            // the Marketplace publication metadata.
+            name = "me-tool"
+            email = "593259523@qq.com"
             url = providers.gradleProperty("pluginVendorUrl")
         }
 

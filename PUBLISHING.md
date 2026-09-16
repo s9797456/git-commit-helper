@@ -7,13 +7,15 @@
 
 | 项 | 状态 |
 |---|---|
-| plugin id / name / version | `com.caye.commithelper` / `Commit Helper` / `0.1.0` |
+| plugin id / name / version | `com.caye.commithelper` / `Commit Helper` / `0.1.0`（已提交，审核中）+ 本地已备 **`0.1.1`**（vendor 统一，见 §8） |
 | since-build | `241`（2024.1+），无 until-build |
-| 展示内容 | `marketplace/description.html`（2975 字符）、`marketplace/change-notes.html`（750 字符），构建时写入 plugin.xml |
+| vendor | `me-tool <593259523@qq.com>`（与 Marketplace vendor 档案一致；0.1.1 起生效） |
+| 展示内容 | `marketplace/description.html`、`marketplace/change-notes.html`，构建时写入 plugin.xml |
 | 本地验收 | `./gradlew clean test buildPlugin verifyPlugin verifyPluginProjectConfiguration` 全绿；67 测试；241/243/262 三版本 verifier `Compatible` |
 | 签名 | ✅ 密钥已生成、`signPlugin` + `verifyPluginSignature` 实跑通过（见 §2） |
 | 上传配置 | `intellijPlatform { publishing { token = env("PUBLISH_TOKEN") } }` 已就绪 |
-| 产物 | `build/distributions/git-commit-helper-0.1.0.zip`（未签名）与 `…-0.1.0-signed.zip`（上传用），约 176 KB，上限 400 MB |
+| 已上架 | 条目 id `34303`（`/plugin/34303-commit-helper`）；**0.1.0 审核中**，尚不可安装 |
+| 产物 | `build/distributions/git-commit-helper-0.1.0*.zip`（已提交）与 `…-0.1.1*.zip`（待发），约 176 KB，上限 400 MB |
 
 > 沙箱里跑 Gradle 需要 `GRADLE_USER_HOME=/Users/sunpengfei/code/deepseek/.gradle-home`；
 > 你自己终端里不需要。
@@ -56,17 +58,19 @@ source ~/.commit-helper-signing/publish-env.sh
 echo "export PUBLISH_TOKEN='perm:...'" >> ~/.commit-helper-signing/publish-env.sh
 ```
 
-## 4. 首次发布：必须网页手动上传
+## 4. 首次发布：必须网页手动上传（✅ 已完成）
 
 官方明确"the first plugin publication must always be uploaded manually"，Gradle 的
 `publishPlugin` 只能用于**已有条目**的后续版本。
 
+**已于 2026-09-16 用 0.1.0 完成**：条目 id `34303`，License/源码链接/4 张截图/Tags 都已填，
+现在处于审核中（§8 有核对结果）。当时的步骤，供以后重建条目时参考：
+
 1. 用 JetBrains Account 登录 <https://plugins.jetbrains.com/author/me>；
 2. `Upload plugin` → 选择/创建 **Vendor profile**（要接受
    [Developer Agreement](https://plugins.jetbrains.com/legal/developer-agreement)）；
-3. 上传 `build/distributions/git-commit-helper-0.1.0.zip`（**签过名的那份**）；
-4. 在网页上补：License（Apache-2.0 + 源码链接）、Tags（建议 `VCS`、`Git`、`AI`、
-   `Productivity`）、截图（可选，强烈建议放 2–3 张）；
+3. 上传 `build/distributions/git-commit-helper-<version>-signed.zip`（**签过名的那份**）；
+4. 在网页上补：License（Apache-2.0 + 源码链接）、Tags、截图；
 5. 提交后等审核（首次通常 1–3 个工作日）。
 
 ## 5. 之后每次发版
@@ -80,6 +84,11 @@ cd /Users/sunpengfei/code/deepseek/git-commit-helper
 source ~/.commit-helper-signing/publish-env.sh
 ./gradlew publishPlugin
 ```
+
+**下一个版本 0.1.1 已就绪**（vendor 统一为 `me-tool`，见 §8）：
+`build/distributions/git-commit-helper-0.1.1-signed.zip` 已签名并通过 `verifyPluginSignature`。
+建议等 0.1.0 的审核结果出来后（通过就打 0.1.1 这个补丁版；若被打回，正好用 0.1.1 一并修正）
+再走上面的第 3 步 —— 前提是 `PUBLISH_TOKEN` 已按 §3 放进 `publish-env.sh`。
 
 想先放 beta/EAP 频道（用户需自行添加对应仓库 URL 才能装）：
 
@@ -135,9 +144,12 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 | 名称 | Commit Helper |
 | vendor | 组织 `me-tool`（<https://plugins.jetbrains.com/vendor/me-tool>） |
 
-注意：包内 `plugin.xml` 的 vendor 是 `sunpengfei / spf@caye.com`，与 Marketplace 上的 vendor
-档案（`me-tool / 593259523@qq.com`）不一致 —— 不影响安装与更新，但要统一的话改
-`build.gradle.kts` 的 `pluginConfiguration.vendor { name/email/url }` 后重新发版。
+vendor 身份已统一为 **`me-tool / 593259523@qq.com`**（URL 用仓库地址），0.1.1 起生效。
+
+> 改的时候注意：真正进包的是 `src/main/resources/META-INF/plugin.xml` 里的 `<vendor>`，
+> `build.gradle.kts` 的 `pluginConfiguration.vendor { }` **不会覆盖它**（0.1.0 打包实证：
+> 两处都写老值时，生成的 `build/tmp/patchPluginXml/plugin.xml` 与 zip 内 XML 都还是老值）。
+> 两处要同时改，改完解开 zip 里的 `META-INF/plugin.xml` 确认一遍。
 
 **徽章（GitHub 上用这个）** —— GitHub 会过滤 Markdown 里的 `<script>`，所以 README 只能放图片徽章。
 `README.md` / `README.zh.md` 现在用的是**静态** Marketplace 徽章 + 下载量徽章 + 协议徽章：

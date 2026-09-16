@@ -260,7 +260,9 @@ com.caye.commithelper
 ## 10. 发布
 
 - 免费插件，**本地手动**发布（不在仓库存 Marketplace token）：`./gradlew signPlugin` → `./gradlew publishPlugin`。
-- vendor：`sunpengfei <spf@caye.com>`（来自本机 git 全局配置）。
+- vendor：`me-tool <593259523@qq.com>`（与 Marketplace vendor 档案一致；0.1.1 起生效）。
+  注意：**真正进包的是 `src/main/resources/META-INF/plugin.xml` 里的 `<vendor>`**，
+  `build.gradle.kts` 的 `vendor {}` 不会覆盖它（0.1.0 打包实证），两处需同步维护。
 - plugin id `com.caye.commithelper`，name `Commit Helper`，license **Apache-2.0**。
 - 签名证书与 `PUBLISH_TOKEN` 由用户在本地 `~/.gradle/gradle.properties` 或环境变量提供，仓库内只留配置位。
 - README 中英双语；顺带提供 `README.zh.md`。
@@ -390,8 +392,22 @@ com.caye.commithelper
       （`card` / `install`）不能放 README —— README 用 shields.io 徽章
       （`jetbrains/plugin/v|d/34303`，实测 200；评分端点目前取不到，暂不放），
       widget 另存到真实承载页 `marketplace/widget.html`（含两个 widget 与源码片段）。
-    - 记录一处不一致：包内 vendor 是 `sunpengfei / spf@caye.com`，Marketplace vendor 档案是
-      `me-tool / 593259523@qq.com`。不影响安装更新，统一与否属用户决定，未擅自改动。
+    - 曾发现一处不一致：包内 vendor 是 `sunpengfei / spf@caye.com`，Marketplace vendor 档案是
+      `me-tool / 593259523@qq.com`。用户决定统一，见下方第 19 条。
+
+19. **vendor 身份统一（0.1.1）**：按用户决定，vendor 统一为 `me-tool <593259523@qq.com>`，
+    URL 用仓库地址。
+    - **关键实证**：真正进包的是 `src/main/resources/META-INF/plugin.xml` 的 `<vendor>` 元素 ——
+      `build.gradle.kts` 里 `pluginConfiguration.vendor { }` 填了老值 `sunpengfei` 而 XML 里也写死老值，
+      0.1.0 打出的 `build/tmp/patchPluginXml/plugin.xml` 与 zip 内 `META-INF/plugin.xml` 都仍是老的，
+      说明该 DSL 块**不覆盖** XML 中的 `<vendor>`。因此两处都已同步修改，并在 `build.gradle.kts`
+      留了注释说明这一关系（这是个容易踩的坑：只改 Gradle 配置不会生效）。
+    - 版本随之升到 **0.1.1**（0.1.0 已提交审核，改动必须随新版本才生效），
+      `marketplace/change-notes.html` 顶部新增 0.1.1 小节。
+    - 验证：`./gradlew test buildPlugin verifyPluginProjectConfiguration` = BUILD SUCCESSFUL；
+      解开 `build/distributions/git-commit-helper-0.1.1.zip` 内 `META-INF/plugin.xml` 确认
+      `<version>0.1.1</version>` 与 `<vendor email="593259523@qq.com" …>me-tool</vendor>`，
+      change notes 也已注入。
 
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 
