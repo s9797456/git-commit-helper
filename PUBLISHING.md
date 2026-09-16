@@ -20,8 +20,8 @@
 
 ## 1. 发布前必须做的（工程侧只剩 1 项）
 
-1. ~~`gradle.properties` 的 `pluginVendorUrl`~~ ✅ 已填 `https://github.com/s9797456/git-commit-help`。
-2. **源码推上 GitHub**：仓库已建好且为空，只差 `git push`（需要你的 token），见 §6。
+1. ~~`gradle.properties` 的 `pluginVendorUrl`~~ ✅ 已填 `https://github.com/s9797456/git-commit-helper`。
+2. **源码推上 GitHub**：仓库已建好且为空（`git push` 只剩凭据，见 §6 —— 已实测连接可用）。
    Marketplace 规定"选开源协议就必须给公开源码链接"，**这一条不做完无法上架**。
 3. **网页表单要填**：Vendor profile（名称/邮箱/网址）、License（Apache-2.0 + 源码链接）、
    Tags（建议 `VCS`/`Git`/`AI`/`Productivity`）、截图（可选但建议）。
