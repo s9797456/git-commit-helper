@@ -365,12 +365,14 @@ com.caye.commithelper
       重跑即通过 —— 记为环境瞬时故障，不是代码问题。
     - 发布清单见 `PUBLISHING.md`；首次上传必须走网页（官方规定），之后才可用 `publishPlugin`。
       选择开源协议（本项目 Apache-2.0）时 Marketplace 要求提供**公开源码链接**，这是当前唯一的前置阻塞项。
-    - 公开源码落点：`s9797456/git-commit-helper`（公开、空仓库，默认分支 `main`；用户先建成
+    - 公开源码落点：`s9797456/git-commit-helper`（公开，默认分支 `main`；用户先建成
       `git-commit-help` 后改名，API 一度返回 301，已按规范名同步 `origin` 与 `pluginVendorUrl`）。
-      本地 6 个提交已就绪，`.gitignore` 已含 `*.pem`/`publish-env.sh` 等。
-      `github.com:443` 连接成功率约 1/5（`api.github.com` 稳定），但**连通时 push 报的是
-      `could not read Username … terminal prompts disabled`** —— 即网络与配置均已就绪，
-      唯一缺口是凭据（本机无 `gh`、无 SSH key、无 credential helper），故首次 `git push` 需用户执行。
+      `.gitignore` 已含 `*.pem`/`*.crt`/`publish-env.sh` 等，密钥与大目录均未入库。
+      `github.com:443` 连接成功率约 1/5（`api.github.com` 稳定），失败表现为 75s 超时；
+      连接成功时 push 报的是 `could not read Username … terminal prompts disabled`，
+      即网络与配置本就就绪，唯一缺口是凭据（本机无 `gh`、无 SSH key、无 credential helper）。
+      用户提供 token 后**首次推送成功**（凭据只经命令行 HTTP header 传递，不落任何文件、
+      不进 `.git/config`），`api.github.com` 核对远端 `main` HEAD 与本地一致。
 
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 

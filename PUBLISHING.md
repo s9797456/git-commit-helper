@@ -18,12 +18,11 @@
 > 沙箱里跑 Gradle 需要 `GRADLE_USER_HOME=/Users/sunpengfei/code/deepseek/.gradle-home`；
 > 你自己终端里不需要。
 
-## 1. 发布前必须做的（工程侧只剩 1 项）
+## 1. 发布前必须做的（工程侧已全部就绪）
 
 1. ~~`gradle.properties` 的 `pluginVendorUrl`~~ ✅ 已填 `https://github.com/s9797456/git-commit-helper`。
-2. **源码推上 GitHub**：仓库已建好且为空（`git push` 只剩凭据，见 §6 —— 已实测连接可用）。
-   Marketplace 规定"选开源协议就必须给公开源码链接"，**这一条不做完无法上架**。
-3. **网页表单要填**：Vendor profile（名称/邮箱/网址）、License（Apache-2.0 + 源码链接）、
+2. ~~公开源码（Apache-2.0 上架必需）~~ ✅ 已推送到该公开仓库，见 §6。
+3. **网页表单要填**：Vendor profile（名称/邮箱/网址）、License（Apache-2.0 + 上面源码链接）、
    Tags（建议 `VCS`/`Git`/`AI`/`Productivity`）、截图（可选但建议）。
 
 ## 2. 签名密钥（已完成，勿重复生成）
@@ -91,38 +90,30 @@ intellijPlatform { publishing { channels = listOf("beta") } }
 
 ## 6. 公开源码（Apache-2.0 上架必需）
 
-仓库已存在，且是**公开空仓库**：<https://github.com/s9797456/git-commit-helper>
-（`api.github.com` 查得 `private: false`、`size: 0`、默认分支 `main`）。本地 `origin`
-已指向它，`pluginVendorUrl` 也已填成这个地址；本地有 3 个提交（`f0fe48d` 主体、
-`3af39f3` 发布文档、`d6b203f` vendor 链接），43 个文件，密钥与大目录都在 `.gitignore` 里。
+✅ 已发布：<https://github.com/s9797456/git-commit-helper>（公开，默认分支 `main`）。
+`origin` 与 `pluginVendorUrl` 都指向它，本地与远端一致（跟踪分支已建立）。
 
-**只差凭据**：本机没有 `gh`、没有 SSH key、没有 credential helper，keychain 里也没有
-github 条目。首次推送要 GitHub 用户名 + **Personal Access Token**（GitHub 早已不接受账号密码；
-classic token 给 `repo` 权限，或 fine-grained token 给 Contents: Read and write）。
-
-`github.com:443` 只有约 **1/5** 的连接成功率（实测 5 次探测 1 次 200，失败是 75s 超时），
-所以用带重试的方式推：
+后续提交用带重试的推送（`github.com:443` 实测只有约 **1/5** 的连接成功率，失败表现为
+75s 超时，重试即可；`api.github.com` 是稳定的）：
 
 ```bash
 cd /Users/sunpengfei/code/deepseek/git-commit-helper
-
-# 可选但推荐：token 存进 macOS keychain，之后不必再输，我这边也能代你推后续提交
-git config --global credential.helper osxkeychain
-
 for i in $(seq 1 10); do
-  git push -u origin main && break
+  git push && break
   echo "第 $i 次失败，重试…"; sleep 3
 done
 ```
 
-Token 在 <https://github.com/settings/tokens> 生成。本来就有代理的话直接：
+首次推送要 GitHub 用户名 + **Personal Access Token**（GitHub 早已不接受账号密码；classic 给
+`repo` 权限，或 fine-grained 给 Contents: Read and write）。把 token 存进 keychain 可免去重复输入：
 
 ```bash
-git -c http.proxy=http://127.0.0.1:<端口> push -u origin main
+git config --global credential.helper osxkeychain   # 之后 push 输一次即可
 ```
 
-推成功后告诉我，我会用 `api.github.com` 核对 `main` 上的提交，并把链接写进 Marketplace
-上传表单的 **Source code** 字段（vendor 链接已就绪）。
+有代理的话：`git -c http.proxy=http://127.0.0.1:<端口> push`。
+
+Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址。
 
 ## 7. 排查
 
