@@ -23,9 +23,8 @@
 1. `gradle.properties` 里的 `pluginVendorUrl` —— 现在还是占位 `https://github.com/`，
    会变成 Marketplace 上的 vendor 链接。
 2. Marketplace 网页表单里要填 **Vendor profile**（名称/邮箱/网址）。
-3. **源码地址**：Marketplace 规定"选开源协议就必须给公开源码链接"。当前 `LICENSE` 是
-   Apache-2.0，所以要么把仓库推到公开托管（GitHub/Gitee/GitLab 均可），要么改选
-   JetBrains 提供的 EULA 模板（那就不能再用 Apache-2.0 的说法）。**这一条不做完无法上架。**
+3. **源码地址**（已定：GitHub 公开仓库）：Marketplace 规定"选开源协议就必须给公开源码链接"。
+   本地仓库与首次提交已备好，你只需建仓 + `git push`，见 §6。**这一条不做完无法上架。**
 
 ## 2. 签名密钥（已完成，勿重复生成）
 
@@ -90,7 +89,33 @@ source ~/.commit-helper-signing/publish-env.sh
 intellijPlatform { publishing { channels = listOf("beta") } }
 ```
 
-## 6. 排查
+## 6. 公开源码（Apache-2.0 上架必需）
+
+本地仓库已就绪：`git init -b main` + 首次提交 `f0fe48d`（43 个文件，`build/`、`.gradle/`、
+`.verifier-home/`、`.intellijPlatform/`、`*.pem`、`publish-env.sh` 都已在 `.gitignore` 里，
+没有密钥或大文件进库）。
+
+在 GitHub 上建一个**公开空仓库**（不要勾 "Add a README/.gitignore"，避免和本地冲突），然后：
+
+```bash
+cd /Users/sunpengfei/code/deepseek/git-commit-helper
+git remote add origin https://github.com/<你的用户名>/git-commit-helper.git
+git push -u origin main
+```
+
+网络提示：本机对 `github.com:443` 是**间歇性**可达（实测都解析到 `20.205.243.166`，
+`curl` 有时 200、`git` 常 75s 超时；`api.github.com` 稳定 200）。推失败就多试几次或走代理：
+
+```bash
+git -c http.proxy=http://127.0.0.1:7890 push -u origin main
+```
+
+拿到公开链接后填两处：
+
+1. `gradle.properties` 的 `pluginVendorUrl`（或改成你的主页）；
+2. Marketplace 上传表单里的 **Source code** 字段。
+
+## 7. 排查
 
 | 现象 | 原因 / 处理 |
 |---|---|
