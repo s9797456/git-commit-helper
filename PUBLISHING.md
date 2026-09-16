@@ -153,16 +153,33 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 > `https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains` 即可。
 > 评分端点（`r`）在零评分时同样取不到。
 
-**当前状态：条目已建，但还没有可安装的版本。** 用脚本查：
+**当前状态：已提交，等待 JetBrains 审核**（2026-09-16 用 `api/plugins/34303` 核对）：
+
+| 字段 | 值 | 说明 |
+|---|---|---|
+| `approve` | `false` | 尚未通过审核 |
+| `hasUnapprovedUpdate` | `true` | 版本已提交、正在审核队列里 |
+| `pricingModel` / `isBlocked` / `isHidden` | `FREE` / `false` / `false` | — |
+| `licenseUrl` | `https://www.apache.org/licenses/LICENSE-2.0` | 已填 |
+| `sourceCodeUrl` | `https://github.com/s9797456/git-commit-helper/tree/main` | 已填（Apache-2.0 必需项） |
+| `screens` | 4 张 | 已有截图 |
+| `tags` | AI, Code Tools, Formatting | 已有标签 |
+| 公开更新源 `plugins/list?pluginId=…` | 空 `<plugin-repository/>` | 审核通过前 IDE 装不到 |
+
+即**审核材料已齐，没有缺项**，只需等（首次上架人工审核，官方口径 1–3 个工作日）。
+一条命令随时复查（会打印上面这些字段 + IDE 真正用的公开更新源）：
 
 ```bash
 scripts/listing-status.sh
 ```
 
-它会打印条目信息，并检查 IDE 真正使用的公开更新源
-（`https://plugins.jetbrains.com/plugins/list?pluginId=com.caye.commithelper`）。
-只要这个源还是空的 `<plugin-repository/>`，用户在 IDE 里就搜不到、装不上 ——
-说明**首次上传还没提交，或仍在审核中**（JetBrains 对首次上架会人工审核，通常 1–3 个工作日）。
+**审核通过后要做的**：
+
+1. 复查：`approve` 变 `true`、公开更新源非空 → IDE 里就能搜到并安装了；
+2. 把两个 README 的静态 Marketplace 徽章换成动态版本徽章
+   （`https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains`）；
+3. 之后每个新版本：改 `pluginVersion` + 更新 `marketplace/change-notes.html`，
+   然后 `source ~/.commit-helper-signing/publish-env.sh && ./gradlew publishPlugin`（见 §5）。
 
 **建议补的截图**（在条目页 `Edit` 里上传，比文字描述更能说明问题）：
 

@@ -376,12 +376,16 @@ com.caye.commithelper
 
 18. **上架条目与推广物料**：Marketplace 上**条目已创建**（`api/plugins/34303` 核对到
     `xmlId = com.caye.commithelper`（与包内一致）、名称 Commit Helper、vendor 组织 `me-tool`，
-    页面 <https://plugins.jetbrains.com/plugin/34303-commit-helper>），但**尚无已批准版本**：
-    公开更新源 `plugins/list?pluginId=com.caye.commithelper` 仍返回空的 `<plugin-repository/>`，
-    `api/plugins/34303/updates` 为 `[]`，`downloads: 0` —— 即首次上传未提交或仍在审核，
-    用户在 IDE 内还搜不到。为此加了 `scripts/listing-status.sh` 一键查询（条目信息 + 该公开源），
-    并把 README 的版本徽章换成静态徽章：`jetbrains/plugin/v/34303` 在无版本时渲染为
-    `marketplace: invalid response data`，等有版本后再换回（脚本里有提示）。
+    页面 <https://plugins.jetbrains.com/plugin/34303-commit-helper>）。**版本已提交、等待审核**：
+    `approve = false` 且 `hasUnapprovedUpdate = true`；审核材料无缺项 —— `licenseUrl`（Apache-2.0）、
+    `sourceCodeUrl`（仓库 main）、4 张截图、tags（AI / Code Tools / Formatting）、`pricingModel = FREE`
+    均已填。因此公开更新源 `plugins/list?pluginId=com.caye.commithelper` 仍是空的
+    `<plugin-repository/>`、`api/plugins/34303/updates` 为 `[]`、`downloads: 0`，IDE 内暂时搜不到。
+    - 加了一键复查脚本 `scripts/listing-status.sh`：打印上述审核字段（`approve` /
+      `hasUnapprovedUpdate` / 源码与协议链接 / 截图数 / 标签）**加** IDE 真正使用的公开更新源，
+      避免只看条目页而误判"已上线"。
+    - README 用**静态** Marketplace 徽章而非版本徽章：`jetbrains/plugin/v/34303` 在无已批准版本时
+      渲染为 `marketplace: invalid response data`（实测），审核通过后按脚本提示换回动态徽章。
     - **平台限制导致的做法区分**：GitHub 会过滤 Markdown 里的 `<script>`，所以官方 widget
       （`card` / `install`）不能放 README —— README 用 shields.io 徽章
       （`jetbrains/plugin/v|d/34303`，实测 200；评分端点目前取不到，暂不放），
