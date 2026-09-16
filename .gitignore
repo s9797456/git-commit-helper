@@ -1,0 +1,15 @@
+.gradle/
+build/
+out/
+.verifier-home/
+.intellijPlatform/
+.idea/
+*.iml
+*.log
+.DS_Store
+local.properties
+
+# Signing material must never be committed (see PUBLISHING.md)
+*.pem
+*.crt
+publish-env.sh

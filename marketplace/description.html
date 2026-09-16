@@ -1,0 +1,66 @@
+<h2>Commit Helper</h2>
+
+<p>
+  Turns the changes you have checked in the commit panel into a ready-to-commit message: a
+  subject line plus an itemized body. Grouping of files and modules is done locally and
+  deterministically; an optional LLM (OpenAI-compatible, Anthropic or Gemini) only takes care of
+  the wording. If the model is unreachable, the plugin writes the local grouping result instead
+  of failing.
+</p>
+
+<p>
+  Nothing is generated until you click, and nothing is ever committed for you: the plugin only
+  proposes text in the commit message box, where you can edit it as usual.
+</p>
+
+<h3>Features</h3>
+<ul>
+  <li><b>Toolbar action in the commit message box</b> — click <i>Organize Commit Message</i> and
+    review the proposal in the preview dialog (replace, append or cancel).</li>
+  <li><b>Hybrid generation</b> — file/module grouping is computed locally; the LLM only rewrites
+    the wording.</li>
+  <li><b>Editable templates</b> — output format template and prompt template, both with presets
+    (Conventional Commits style by default).</li>
+  <li><b>Repository commit template</b> — an existing <code>.gitmessage</code> /
+    <code>git config commit.template</code> is used as the output skeleton, and its comment lines
+    are preserved.</li>
+  <li><b>Issue key injection</b> — <code>{issue}</code> is extracted from the branch name or
+    recent commit subjects. No Jira/GitHub API calls.</li>
+  <li><b>Changelog and PR description</b> — generated in a preview window for copying; no files
+    are written and no git commands are executed.</li>
+  <li><b>Multi-vendor LLM support</b> — OpenAI-compatible endpoints, Anthropic and Gemini, each
+    configurable, with a <i>local only</i> mode.</li>
+  <li><b>Chinese and English output</b> — switchable per generation.</li>
+</ul>
+
+<h3>Getting started</h3>
+<ol>
+  <li>Open <b>Settings | Tools | Commit Helper</b> and pick a provider, or stay on <i>Local only</i>
+    (no account needed).</li>
+  <li>Check the files you want in the commit tool window, click the commit message box, then click
+    <i>Organize Commit Message</i> in its toolbar.</li>
+  <li>Review the proposal, then replace or append.</li>
+</ol>
+
+<p>
+  Large changesets are sampled and noisy files (lock files, build output, minified bundles,
+  binaries) are summarised instead of being sent in full. Unversioned files are read from disk;
+  files larger than 1 MB are skipped.
+</p>
+
+<h3>Privacy</h3>
+<p>
+  Only the diff of the files you explicitly checked is sent to the provider you configured.
+  API keys are stored in the IDE credential store (Password Safe), never in the project. All
+  network access is disabled in <i>Local only</i> mode.
+</p>
+
+<h3>Requirements</h3>
+<ul>
+  <li>IntelliJ Platform 2024.1 or newer (IntelliJ IDEA, and any IDE shipping the platform and Git
+    support).</li>
+  <li>Git4Idea (bundled with IntelliJ IDEA and most IntelliJ-based IDEs).</li>
+</ul>
+
+<h3>License</h3>
+<p>Apache License 2.0.</p>

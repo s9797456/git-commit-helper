@@ -1,0 +1,43 @@
+<idea-plugin>
+    <id>com.caye.commithelper</id>
+    <name>Commit Helper</name>
+    <vendor email="spf@caye.com" url="https://github.com/">sunpengfei</vendor>
+
+    <description><![CDATA[
+    Organizes the changes you have checked in the commit panel into a ready-to-commit message:
+    a subject line plus an itemized body. Local, deterministic grouping runs first; an optional
+    LLM (OpenAI-compatible, Anthropic or Gemini) only handles the wording. If the model is
+    unavailable the plugin falls back to the local grouping result instead of failing.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService
+                serviceImplementation="com.caye.commithelper.settings.CommitHelperSettings"/>
+        <applicationConfigurable
+                parentId="tools"
+                id="com.caye.commithelper.settings"
+                displayName="Commit Helper"
+                instance="com.caye.commithelper.settings.CommitHelperConfigurable"/>
+        <notificationGroup id="Commit Helper" displayType="BALLOON" isLogByDefault="true"/>
+    </extensions>
+
+    <actions>
+        <action id="com.caye.commithelper.OrganizeCommitMessage"
+                class="com.caye.commithelper.action.OrganizeCommitMessageAction"
+                icon="AllIcons.Actions.Refresh"
+                text="Organize Commit Message"
+                description="Organize the checked changes into a commit message (local grouping + optional LLM wording)">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
+        </action>
+        <action id="com.caye.commithelper.GenerateChangelog"
+                class="com.caye.commithelper.action.GenerateChangelogAction"
+                icon="AllIcons.Actions.ShowAsTree"
+                text="Generate Changelog / PR Description"
+                description="Generate a changelog for the checked changes and a PR description for the current branch">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
