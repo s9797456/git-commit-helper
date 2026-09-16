@@ -91,7 +91,7 @@ intellijPlatform { publishing { channels = listOf("beta") } }
 
 ## 6. 公开源码（Apache-2.0 上架必需）
 
-仓库已存在，且是**公开空仓库**：<https://github.com/s9797456/git-commit-help>
+仓库已存在，且是**公开空仓库**：<https://github.com/s9797456/git-commit-helper>
 （`api.github.com` 查得 `private: false`、`size: 0`、默认分支 `main`）。本地 `origin`
 已指向它，`pluginVendorUrl` 也已填成这个地址；本地有 3 个提交（`f0fe48d` 主体、
 `3af39f3` 发布文档、`d6b203f` vendor 链接），43 个文件，密钥与大目录都在 `.gitignore` 里。
@@ -123,9 +123,6 @@ git -c http.proxy=http://127.0.0.1:<端口> push -u origin main
 
 推成功后告诉我，我会用 `api.github.com` 核对 `main` 上的提交，并把链接写进 Marketplace
 上传表单的 **Source code** 字段（vendor 链接已就绪）。
-
-> 注意：远端仓库名是 `git-commit-help`（少一个 `er`），本地目录/工程名是 `git-commit-helper`。
-> 不影响功能；若那是建错的仓库名，先在 GitHub 改名（Settings → Repository name），我同步 `origin`。
 
 ## 7. 排查
 
