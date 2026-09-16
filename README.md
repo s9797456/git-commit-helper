@@ -1,11 +1,25 @@
 # Commit Helper
 
+[![Marketplace version](https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 An IntelliJ Platform plugin that turns the changes you checked in the commit panel into a
 ready-to-commit message: a subject line plus an itemized body.
 
 Local, deterministic grouping runs first; an optional LLM (OpenAI-compatible, Anthropic or
 Gemini) only handles the wording. If the model is unavailable, the plugin writes the local
 grouping result instead of failing.
+
+## Install
+
+From the IDE: **Settings | Plugins | Marketplace** → search for *Commit Helper*, or open the
+[JetBrains Marketplace page](https://plugins.jetbrains.com/plugin/34303-commit-helper) and click
+*Install*. Plugin ID `com.caye.commithelper`, requires IntelliJ Platform 2024.1 or newer.
+
+The plugin page also ships official widgets (a card and an install button). They need a real web
+page, because GitHub strips `<script>` from Markdown: `marketplace/widget.html` is a ready host
+page for them, while the badges above are the GitHub-friendly equivalent.
 
 ## Features
 

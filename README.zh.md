@@ -1,10 +1,23 @@
 # Commit Helper（提交助手）
 
+[![Marketplace 版本](https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![下载量](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 一个 IntelliJ 平台插件：把你**在提交面板里勾选的变更**整理成可直接提交的 commit message
 （首行摘要 + 正文分条列出变更项）。
 
 先用本地确定性规则做分组归类，再由可选的大模型（OpenAI 兼容 / Anthropic / Gemini）负责措辞。
 模型不可用时，插件写入本地分组结果而不是直接失败。
+
+## 安装
+
+IDE 内：**Settings | Plugins | Marketplace** 搜索 *Commit Helper*，或打开
+[JetBrains Marketplace 页面](https://plugins.jetbrains.com/plugin/34303-commit-helper)点 *Install*。
+插件 ID `com.caye.commithelper`，要求 IntelliJ 平台 2024.1 及以上。
+
+插件页还提供官方 widget（卡片 / 安装按钮），它们需要真实网页才能渲染（GitHub 会过滤 Markdown
+里的 `<script>`）——`marketplace/widget.html` 就是现成的承载页，上面那排徽章是 GitHub 上的等价做法。
 
 ## 功能
 

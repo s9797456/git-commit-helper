@@ -123,3 +123,44 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 | 上传后页面显示 "unsigned" 警告 | `signPlugin` 没跑起来：`CERTIFICATE_CHAIN`/`PRIVATE_KEY` 环境变量未注入或不是单行 base64 |
 | `signPlugin` 报证书解析失败 | 环境变量里换行没去掉：重新用 `tr -d '\n'` 生成 `publish-env.sh` |
 | 审核被拒（开源协议缺源码链接） | 见 §1 第 3 条 |
+
+## 8. 上架后：条目信息、徽章与 widget
+
+条目已上线（`api/plugins/34303` 核对）：
+
+| 字段 | 值 |
+|---|---|
+| 插件页 | <https://plugins.jetbrains.com/plugin/34303-commit-helper>（`/plugin/34303` 会 301 到这里） |
+| plugin id | `34303`（`xmlId` = `com.caye.commithelper`，与包内一致） |
+| 名称 | Commit Helper |
+| vendor | 组织 `me-tool`（<https://plugins.jetbrains.com/vendor/me-tool>） |
+
+注意：包内 `plugin.xml` 的 vendor 是 `sunpengfei / spf@caye.com`，与 Marketplace 上的 vendor
+档案（`me-tool / 593259523@qq.com`）不一致 —— 不影响安装与更新，但要统一的话改
+`build.gradle.kts` 的 `pluginConfiguration.vendor { name/email/url }` 后重新发版。
+
+**徽章（GitHub 上用这个）** —— GitHub 会过滤 Markdown 里的 `<script>`，所以 README 只能放图片徽章：
+
+```markdown
+[![Marketplace version](https://img.shields.io/jetbrains/plugin/v/34303?label=marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+```
+
+已加进 `README.md` 与 `README.zh.md`（`v` 与 `d` 两个端点实测 200；`r`（评分）目前取不到，
+等有评分再加）。
+
+**Widget（需要真实网页）** —— JetBrains 给的 `card`（卡片）与 `install`（安装按钮）两种：
+
+```html
+<script src="https://plugins.jetbrains.com/assets/scripts/mp-widget.js"></script>
+<script>
+  MarketplaceWidget.setupMarketplaceWidget('card', 34303, "#yourelement");
+  MarketplaceWidget.setupMarketplaceWidget('install', 34303, "#yourelement");
+</script>
+```
+
+`marketplace/widget.html` 是现成的承载页（两个 widget 各占一个 id，并附上源码片段）。
+想发布成网页的话，最简单是开 GitHub Pages：仓库 **Settings → Pages → Deploy from a branch**，
+选 `main` + `/ (root)`，之后就能访问
+`https://s9797456.github.io/git-commit-helper/marketplace/widget.html`；把这段嵌到公司官网/博客同理。
+
