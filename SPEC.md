@@ -361,6 +361,10 @@ com.caye.commithelper
       （已用 2.19.0 字节码确认：`createTemporaryCertificateChainFile` 只做 `writeText`）。
       两者都在 `build.gradle.kts` 修好（显式 `dependsOn` + 带 fallback 的 base64 解码），
       `signPlugin verifyPluginSignature` 实跑通过并产出 `-signed.zip`。
+    - **签名存放位置容易误判**：签名后的 zip 里**没有** `META-INF/*.RSA`/`*.SF`，而是 zip 结构中的
+      签名块（文件尾部可见 `PK\x05\x06` 之前有 `PK Sig Block 42` 标记）。0.1.1 实测：内层
+      `lib/*.jar` 的 SHA-256 与未签名包**逐字节一致**（`c354e1d9…`），外层 zip 只多了约 2 KB。
+      所以"看不到 META-INF 签名文件"≠"没签名"，判断依据应是 `verifyPluginSignature` 的结果。
     - 密钥生成在工程外：`~/.commit-helper-signing/`（自签证书 `CN=sunpengfei`，2026-09-16 → 2036-09-13），
       `publish-env.sh` 为 600 权限，含三个环境变量的单行 base64；私钥不进工程、不进版本库。
     - 途中一次 `verifyPlugin` 因 `plugins.jetbrains.com` 连接超时失败（`ConnectException`），
@@ -425,7 +429,7 @@ com.caye.commithelper
 | `patchPluginXml` 产出合法 plugin.xml（since-build 241、action/EP 齐全） | ✅ 已解包核对 |
 | `./gradlew verifyPlugin`（241 / 243 / 262） | ✅ 三版本全部 `Compatible`，各 1 处 deprecated API；报告里**无结构性问题**（即 `add-to-group` 的 group-id 在三版本均可解析）。改名后又复跑一次，结论一致 |
 | `./gradlew verifyPluginProjectConfiguration` | ✅ 无问题（修掉 Kotlin stdlib 冲突后） |
-| `./gradlew signPlugin verifyPluginSignature` | ✅ 产出 `build/distributions/git-commit-helper-0.1.0-signed.zip` 且签名校验通过 |
+| `./gradlew signPlugin verifyPluginSignature` | ✅ 产出 `…-0.1.0-signed.zip`、`…-0.1.1-signed.zip` 且签名校验通过 |
 | `./gradlew runIde` 冷启动（IC-2024.1 空配置沙箱） | ✅ 日志 `Loaded custom plugins: Commit Helper (0.1.0)`，**0 条异常堆栈** |
 | 无头自动化的"冒烟"覆盖（见下） | ✅ 8/12 条 |
 | GUI 冒烟 | ⚠️ 见下：仅剩需要真实窗口/真实网络的场景留给用户 |
