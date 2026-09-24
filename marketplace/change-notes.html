@@ -1,20 +1,15 @@
 <h3>0.1.1</h3>
-<ul>
-  <li>Vendor metadata now matches the Marketplace vendor profile (<code>me-tool</code>), so the
-    IDE plugin manager and the Marketplace page show the same publisher.</li>
-</ul>
+<h4>优化项：</h4>
+<p>1、插件发布者信息由 <code>sunpengfei</code> 改为 <code>me-tool</code>（邮箱 <code>593259523@qq.com</code>）：IDE 插件管理器里显示的发行方与 JetBrains Marketplace 上该插件的 vendor 档案一致。</p>
 
 <h3>0.1.0</h3>
-<ul>
-  <li>First public release.</li>
-  <li>Toolbar action in the commit message box that turns the checked files into a subject line
-    plus an itemized body, with a replace / append / cancel preview.</li>
-  <li>Local, deterministic grouping with an optional LLM rewriting step (OpenAI-compatible,
-    Anthropic, Gemini) and automatic fallback to the local result.</li>
-  <li>Output format and prompt templates, with presets.</li>
-  <li><code>.gitmessage</code> / <code>git config commit.template</code> used as the output
-    skeleton.</li>
-  <li><code>{issue}</code> injection from the branch name or recent commits.</li>
-  <li>Changelog and PR description generation (copy only).</li>
-  <li>Chinese and English output.</li>
-</ul>
+<h4>新增项：</h4>
+<p>1、提交工具窗口的消息框工具栏新增 Organize Commit Message 入口：把已勾选的文件整理成"首行摘要 + 正文分条"的提交信息，正文按文件/模块分组。</p>
+<p>2、生成结果先展示在预览窗，提供"替换 / 追加 / 取消"三个动作；未点确认前不改动消息框内容，也不会触发提交。</p>
+<p>3、本地确定性分组加可选模型润色：先按本地规则分组，模型只负责措辞；模型不可用时回退为本地分组结果，而不是报失败。</p>
+<p>4、支持三类模型服务：OpenAI 兼容接口、Anthropic、Gemini；接口地址、API Key、模型名可在设置页配置。</p>
+<p>5、输出格式模板与提示词模板可编辑，并内置预设。</p>
+<p>6、支持读取 <code>.gitmessage</code> / <code>git config commit.template</code> 作为提交信息的输出骨架。</p>
+<p>7、支持从当前分支名或最近提交中提取 <code>{issue}</code> 编号并注入提交信息。</p>
+<p>8、支持生成 changelog 与 PR 描述，仅复制到剪贴板，不写入仓库文件。</p>
+<p>9、提交信息输出支持中文与英文两种语言。</p>

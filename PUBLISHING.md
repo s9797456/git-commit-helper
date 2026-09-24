@@ -77,13 +77,31 @@ echo "export PUBLISH_TOKEN='perm:...'" >> ~/.commit-helper-signing/publish-env.s
 
 ```bash
 # 1) 改 gradle.properties 的 pluginVersion（Marketplace 不收同版本号的重复上传）
-# 2) 更新 marketplace/change-notes.html
+# 2) 更新 marketplace/change-notes.html —— 格式见下方《更新说明规范》
 # 3) 本地验收 + 发布
 cd /Users/sunpengfei/code/deepseek/git-commit-helper
 ./gradlew clean test buildPlugin verifyPluginProjectConfiguration
 source ~/.commit-helper-signing/publish-env.sh
 ./gradlew publishPlugin
 ```
+
+### 更新说明规范（每次发版必守）
+
+`marketplace/change-notes.html` 是**唯一事实来源**（会随构建写进 plugin.xml，IDE 的
+"What's new" 与 Marketplace 更新日志都读它）；同一份内容再贴进 PingCode 发版单。
+骨架与完整规则见 `marketplace/change-notes-template.html`，要点：
+
+1. **中文**，小节用 `<h4>新增项：</h4>` / `<h4>优化项：</h4>` / `<h4>修复项：</h4>`。
+2. **空栏整栏省略**（不写"无"）；条目编号用 `1、`（`<p>1、……</p>`），不要用 `<ol>`。
+3. **每条必须点明【改动对象】+【可观察结果】**。禁止"优化了体验 / 提升了性能 / 修复了一些问题"
+   这类无实指表述。
+4. **修复项**写【现象】+【根因或影响范围】，并**尽量**附 PingCode 单号：`（PingCode：BUG-123）`；
+   没有单号就只写描述，不编造、不阻塞发版。
+5. **对外只写用户可感知的改动**：构建属性（如 `pluginGroup`）、依赖升级、CI 调整等内部改动
+   不写进本文件，改记在 PingCode 单的"内部备注"里（例：0.1.1 的 `pluginGroup = cn.me-tool`
+   实测不影响插件 id 与产物，因此对外只写 vendor 变更）。
+6. 首个公开版本只写**新增项**（没有"旧行为变好"，也没有已发布问题可修）。
+7. 版本号必须与 `gradle.properties` 的 `pluginVersion` 完全一致。
 
 **下一个版本 0.1.1 已就绪**（vendor 统一为 `me-tool`，见 §8）：
 `build/distributions/git-commit-helper-0.1.1-signed.zip` 已签名并通过 `verifyPluginSignature`。

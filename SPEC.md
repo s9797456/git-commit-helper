@@ -413,6 +413,20 @@ com.caye.commithelper
       `<version>0.1.1</version>` 与 `<vendor email="593259523@qq.com" …>me-tool</vendor>`，
       change notes 也已注入。
 
+20. **更新说明（change-notes）格式规范**：用户要求发版说明"明确、不可模糊、修复 bug 尽量带
+    PingCode 单号"，并固定为 `新增项 / 优化项 / 修复项` 三栏。经 grill-me 逐项确认的决定：
+    中文；**空栏整栏省略**（不写"无"）；条目编号用 `1、`；每条写【改动对象】+【可观察结果】；
+    修复项写【现象】+【根因】并**尽量**附 `（PingCode：BUG-xxx）`（无单号则不编造、不阻塞发版）；
+    **对外只写用户可感知的改动**（构建属性、依赖、CI 等内部改动只进 PingCode 备注）；首版只写新增项。
+    - 落地物：重写 `marketplace/change-notes.html`（0.1.1 = 优化项 1 条 vendor 变更；
+      0.1.0 = 新增项 9 条，无优化/修复项），新增 `marketplace/change-notes-template.html`
+      （骨架 + 9 条硬性规则），`PUBLISHING.md` §5 新增《更新说明规范》。
+    - 关于 0.1.0 不写修复项：那个"提交面板读不到勾选文件"的 bug 在 0.1.0 **公开发布前**就修掉了，
+      用户从未遇到，故不计入修复项（PingCode 内部可备注）。
+    - 关于 0.1.1 只写 vendor：`pluginGroup = cn.me-tool` 是 Gradle 构建属性，重新打包实测
+      **不影响插件 id**（仍为 `com.caye.commithelper`）与包内容，写进对外说明只会让用户困惑。
+    - 发布口径：`change-notes.html` 为唯一事实来源，PingCode 发版单贴同一份正文 + 内部备注。
+
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 
 | 项 | 状态 |
