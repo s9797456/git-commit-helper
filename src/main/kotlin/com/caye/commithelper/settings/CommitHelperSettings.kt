@@ -27,8 +27,11 @@ class ProviderConfig {
     var baseUrl: String = ""
     var model: String = ""
     var temperature: Double = 0.2
-    var maxTokens: Int = 1024
-    var timeoutSeconds: Int = 60
+
+    // 1024 was too small for a detailed multi-file summary: the JSON was cut off mid-object and
+    // the whole run fell back to the file/statistics list. Kept per provider so it stays tunable.
+    var maxTokens: Int = 4096
+    var timeoutSeconds: Int = 120
 }
 
 /**

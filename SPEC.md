@@ -427,6 +427,30 @@ com.caye.commithelper
       **不影响插件 id**（仍为 `com.caye.commithelper`）与包内容，写进对外说明只会让用户困惑。
     - 发布口径：`change-notes.html` 为唯一事实来源，PingCode 发版单贴同一份正文 + 内部备注。
 
+21. **0.1.2：多仓库 diff 为空、提交框高度/重影、摘要具体化（用户实机反馈的三个问题）**：
+    - 根因①（问题 2/3，影响最大）：`GitDiffService` 把 **项目根**（`project.basePath`）相对路径
+      传给 `git diff`；但 `/Users/sunpengfei/code/v2` 这类多仓库工程的项目根没有 `.git`，每个仓库是子目录，
+      于是 `iot-platform-business-front-v2/src/...` 在仓库内匹配不到任何文件，diff 输出为空 →
+      本地统计只有 `+0/-0`，模型只见文件名 → 摘要模糊/只剩"多少文件、多少行"。已用真实仓库复现：
+      `git ls-files -- src/api/device-manage/deviceOta.ts` 命中，而带仓库名前缀的同一路径为空。
+      修复：新增 `RepoPath.relativePath`，按仓库根生成传 git 的路径、按项目相对路径回填
+      `FileChange.path`（展示/分组不变）；`findBlock` 先精确匹配仓库相对路径，再保留原有后缀兜底。
+    - 根因②（问题 1）：平台提交框**没有**"随内容自动变高"逻辑——2026.2 字节码确认
+      `NonModalCommitPanel` 固定 `preferred/min height = 120`，高度由 `ChangesViewCommitPanelSplitter`
+      决定；而插件在 BGT 调 `setLoading`（Swing 状态）且写入后未重排，造成裁切/滚动条/重影。
+      修复：`setLoading(true)` 移到 EDT；`stopLoading` 与 apply 合并为一次 `invokeLater`；
+      新增 `CommitBoxSizing`：写完后在 EDT 定位最近的垂直 `Splitter`，只放大不缩小、最多 70%，
+      并滚到首行 + 强制重绘；找不到 splitter（未来 UI 改版）时降级为只滚动/重绘，不影响写入。
+    - 根因③（问题 3 的措辞）：用户 IDE 已保存自定义 prompt（含"新增功能/修复项/优化项"标题与
+      "每条 20 字以内"），新默认模板不会覆盖它。按 grill-me 决定：**不改用户模板**，
+      `PromptBuilder.build` 在模板缺少标记时追加固定 `DETAIL_RULES`（要求写出字段/枚举/接口/配置项的
+      前后变化、合并同类、最多 12 条、放宽 20 字限制），带 `[commit-helper:concrete-detail]` 标记的模板不重复追加。
+    - 加固：`ProviderConfig.maxTokens` 1024→4096、`timeoutSeconds` 60→120（用户 XML 未持久化这两项，
+      升级即生效）；JSON 解析失败时用紧凑指令 + 双倍预算重试一次；diff 全空且非二进制时返回
+      `GenerationOutcome.warning`，在通知里明确告知"仅基于文件名"。
+    - 测试：新增 `RepoPathTest`（4）、`CommitBoxSizingTest`（6）、`PromptBuilderTest`（2），
+      总计 **79 个测试全绿**（`./gradlew test`）。
+
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 
 | 项 | 状态 |
@@ -438,7 +462,7 @@ com.caye.commithelper
 
 | 项 | 状态 |
 |---|---|
-| `./gradlew test`（67 个测试，含 21 个平台级测试） | ✅ 通过（修复前 `CommitContextAdapterTest` 两条如实失败，修复后全绿） |
+| `./gradlew test`（79 个测试，含 21 个平台级测试） | ✅ 通过（0.1.2 新增 12 个回归测试；原有 67 个仍全绿） |
 | `./gradlew buildPlugin`（产出 zip） | ✅ 通过，`build/distributions/git-commit-helper-0.1.0.zip` |
 | `patchPluginXml` 产出合法 plugin.xml（since-build 241、action/EP 齐全） | ✅ 已解包核对 |
 | `./gradlew verifyPlugin`（241 / 243 / 262） | ✅ 三版本全部 `Compatible`，各 1 处 deprecated API；报告里**无结构性问题**（即 `add-to-group` 的 group-id 在三版本均可解析）。改名后又复跑一次，结论一致 |

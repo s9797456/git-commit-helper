@@ -14,6 +14,7 @@ import com.intellij.openapi.vcs.VcsDataKeys
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.ui.CommitMessage
 import java.io.File
+import javax.swing.JComponent
 
 /** Where the generated text is written, and how the "busy" state is shown. */
 interface CommitMessageTarget {
@@ -37,6 +38,9 @@ class NoOpTarget : CommitMessageTarget {
 class ReflectiveWorkflowTarget(private val workflowUi: Any) : CommitMessageTarget {
 
     private val messageUi: Any? = invoke(workflowUi, "getCommitMessageUi")
+
+    /** The 2024.2+ message UI is a Swing component in current versions (also the CommitMessage). */
+    val component: JComponent? = messageUi as? JComponent
 
     override fun getText(): String = invoke(messageUi, "getText") as? String ?: ""
 
@@ -101,6 +105,8 @@ data class CommitContext(
     val includedUnversioned: List<FilePath>,
     /** Non-null when the commit panel could not be read at all, as opposed to being empty. */
     val readFailure: String? = null,
+    /** The platform commit message component, used to resize/reveal the box after a write. */
+    val messageComponent: JComponent? = null,
 ) {
     val isEmpty: Boolean get() = includedChanges.isEmpty() && includedUnversioned.isEmpty()
 
@@ -145,7 +151,7 @@ object CommitContextAdapter {
             componentContext?.let { rawWorkflowUi(it) },
             message?.let { enclosingDialog(it) },
         )
-        workflowUi?.let { ui -> fromWorkflowUi(project, ui)?.let { return it } }
+        workflowUi?.let { ui -> fromWorkflowUi(project, ui, message)?.let { return it } }
 
         // 4) Legacy keys. The rebuilt context is a superset of the toolbar's own.
         val sources = listOfNotNull(context, componentContext)
@@ -174,22 +180,25 @@ object CommitContextAdapter {
             includedChanges = changes,
             includedUnversioned = emptyList(),
             readFailure = if (readable) null else UNREADABLE_PANEL,
+            messageComponent = message,
         )
     }
 
     /** Returns null when the workflow UI could not be queried (as opposed to reporting no changes). */
-    private fun fromWorkflowUi(project: Project, ui: Any): CommitContext? {
+    private fun fromWorkflowUi(project: Project, ui: Any, message: CommitMessage?): CommitContext? {
         val changes = invokeList(ui, "getIncludedChanges")
         val unversioned = invokeList(ui, "getIncludedUnversionedFiles")
         if (changes == null && unversioned == null) {
             LOG.debug("Commit Helper: workflow UI ${ui.javaClass.name} did not answer the included-changes calls")
             return null
         }
+        val target = ReflectiveWorkflowTarget(ui)
         return CommitContext(
             project = project,
-            target = ReflectiveWorkflowTarget(ui),
+            target = target,
             includedChanges = changes.orEmpty().filterIsInstance<Change>(),
             includedUnversioned = unversioned.orEmpty().filterIsInstance<FilePath>(),
+            messageComponent = message ?: target.component,
         )
     }
 

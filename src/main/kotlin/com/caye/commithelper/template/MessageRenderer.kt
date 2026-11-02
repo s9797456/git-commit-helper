@@ -158,18 +158,55 @@ object PromptBuilder {
 
     val PROMPT_PLACEHOLDERS = listOf("{language}", "{format}", "{skeleton}", "{diff}", "{fileList}")
 
+    /**
+     * Marks the mandatory detail contract below. Templates that already contain it (e.g. a future
+     * shipped default) are left untouched, so the rules are appended exactly once.
+     */
+    const val DETAIL_RULES_MARKER = "[commit-helper:concrete-detail]"
+
+    /**
+     * Appended to every template that does not carry the marker yet.
+     *
+     * The plugin shipped a deliberately terse prompt for a long time, and users may have edited
+     * their saved template (some added a "within 20 characters" rule). Diff-level facts such as a
+     * field or enum changing value would then be lost, so the quality floor is appended at build
+     * time instead of silently rewriting the user's stored template.
+     */
+    private val DETAIL_RULES = """
+
+$DETAIL_RULES_MARKER
+IMPORTANT — write change-level detail, not file-level labels. This section overrides any earlier
+per-line length limit (for example "within 20 characters"):
+- Every line must say what changed in the code, not merely which file, module, page or feature was touched.
+- When the diff shows a field, enum constant, method signature, config key, API route or condition changing,
+  quote the identifier exactly and state the before → after value/behaviour when the diff shows it. Example:
+  "upgradeMode: AUTO 由通用可选收敛为仅固件 OTA V2；PROMPT 扩展到固件 V1/V2 与配置下发".
+- Include at least one concrete identifier or behavioural fact per line; if a line would still be true for
+  another change in the same module, it is too vague — rewrite it.
+- Merge changes that serve one behaviour into a single line; do not repeat the same file name or heading.
+- Keep lines concise (up to roughly 60 characters); ignore the 20-character cap when it would hide the change.
+- Emit at most 12 numbered lines in total; with many files, merge by behaviour instead of listing files.
+""".trimIndent()
+
     fun build(
         promptTemplate: String,
         language: String,
         formatTemplate: String,
         skeleton: String?,
         filterResult: FilterResult,
-    ): String = promptTemplate
-        .replace("{language}", language)
-        .replace("{format}", formatTemplate)
-        .replace("{skeleton}", skeleton?.takeIf { it.isNotBlank() } ?: "(none)")
-        .replace("{fileList}", filterResult.fileListText)
-        .replace("{diff}", filterResult.diffText.ifBlank { "(diff content disabled)" })
+    ): String {
+        val rendered = promptTemplate
+            .replace("{language}", language)
+            .replace("{format}", formatTemplate)
+            .replace("{skeleton}", skeleton?.takeIf { it.isNotBlank() } ?: "(none)")
+            .replace("{fileList}", filterResult.fileListText)
+            .replace("{diff}", filterResult.diffText.ifBlank { "(diff content disabled)" })
+        return if (promptTemplate.contains(DETAIL_RULES_MARKER)) {
+            rendered
+        } else {
+            rendered.trimEnd() + "\n\n" + DETAIL_RULES + "\n"
+        }
+    }
 
     /** True when none of the known prompt placeholders survived substitution. */
     fun isFullySubstituted(rendered: String): Boolean =

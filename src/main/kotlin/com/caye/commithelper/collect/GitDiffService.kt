@@ -24,6 +24,27 @@ object GitRootLocator {
     }
 }
 
+/**
+ * Paths handed to `git diff` must be relative to the repository root, not the project root.
+ * In a multi-repo project the project-relative path carries the repository directory name
+ * (`repo-name/src/...`), which git never matches, so the diff silently comes back empty.
+ */
+object RepoPath {
+
+    /** Returns [file] relative to [root] with `/` separators, or null when it is outside [root]. */
+    fun relativePath(root: File, file: File): String? = try {
+        val rootPath = root.absoluteFile.toPath().normalize()
+        val filePath = file.absoluteFile.toPath().normalize()
+        if (filePath.startsWith(rootPath)) {
+            rootPath.relativize(filePath).toString().replace(File.separatorChar, '/')
+        } else {
+            null
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
 /** A parsed `diff --git` block. */
 data class DiffBlock(val path: String, val text: String)
 
@@ -99,24 +120,29 @@ class GitDiffService(private val project: Project) {
             byPath[path] = change
         }
 
-        val trackedByRoot = LinkedHashMap<File, MutableList<String>>()
+        data class TrackedEntry(val changePath: String, val repoPath: String, val change: Change)
+
+        val trackedByRoot = LinkedHashMap<File, MutableList<TrackedEntry>>()
         for ((path, change) in byPath) {
             val absolute = absoluteFile(change) ?: continue
             val root = GitRootLocator.findRoot(absolute.parentFile) ?: project.basePath?.let { File(it) } ?: continue
-            trackedByRoot.getOrPut(root) { mutableListOf() }.add(path)
+            // The repository root is not always the project root: git needs the path relative to
+            // the repository, while FileChange keeps the project-relative path for display.
+            val repoPath = RepoPath.relativePath(root, absolute) ?: path
+            trackedByRoot.getOrPut(root) { mutableListOf() }.add(TrackedEntry(path, repoPath, change))
         }
 
-        for ((root, paths) in trackedByRoot) {
-            val diffOutput = if (includeDiff) runDiff(root, paths) else ""
+        for ((root, entries) in trackedByRoot) {
+            val diffOutput = if (includeDiff) runDiff(root, entries.map { it.repoPath }) else ""
             val blocks = if (includeDiff) DiffBlockParser.parse(diffOutput) else emptyList()
-            for (path in paths) {
-                val change = byPath[path] ?: continue
-                val block = findBlock(blocks, path)
+            for (entry in entries) {
+                val block = findBlock(blocks, entry.repoPath)
+                    ?: findBlock(blocks, entry.changePath)
                 val (added, removed) = block?.let { DiffBlockParser.countLines(it.text) } ?: (0 to 0)
                 result.add(
                     FileChange(
-                        path = path,
-                        kind = kindOf(change),
+                        path = entry.changePath,
+                        kind = kindOf(entry.change),
                         added = added,
                         removed = removed,
                         diffText = block?.text.orEmpty(),

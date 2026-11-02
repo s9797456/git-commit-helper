@@ -5,6 +5,7 @@ import com.caye.commithelper.collect.GitDiffService
 import com.caye.commithelper.collect.GitOps
 import com.caye.commithelper.collect.GitRootLocator
 import com.caye.commithelper.filter.DiffFilter
+import com.caye.commithelper.filter.ExclusionRules
 import com.caye.commithelper.group.LocalGrouper
 import com.caye.commithelper.issue.IssueKeyExtractor
 import com.caye.commithelper.llm.LlmClient
@@ -16,6 +17,7 @@ import com.caye.commithelper.model.FileChange
 import com.caye.commithelper.settings.ApiKeyStore
 import com.caye.commithelper.settings.CommitHelperSettings
 import com.caye.commithelper.settings.LanguageOption
+import com.caye.commithelper.settings.ProviderConfig
 import com.caye.commithelper.settings.ProviderKind
 import com.caye.commithelper.template.LanguageDetector
 import com.caye.commithelper.template.LocalFallbackBuilder
@@ -36,6 +38,8 @@ data class GenerationOutcome(
     val usedRepoTemplate: Boolean = false,
     val includedFiles: Int = 0,
     val sampled: Boolean = false,
+    /** Non-fatal problem to surface to the user after the message has been written. */
+    val warning: String? = null,
 )
 
 data class ChangelogOutcome(
@@ -77,6 +81,9 @@ class CommitHelperService(private val project: Project) {
             maxTotalChars = state.maxTotalChars,
             extraExcludes = state.extraExcludes,
         )
+        // A silent empty diff is how the multi-repo path bug looked to the user: only file names
+        // and "+0/-0" reached the model. Keep a visible warning for any remaining cause.
+        val missingDiffWarning = buildDiffWarning(state.includeDiff, files, filterResult)
         indicator?.text = "Grouping changes..."
 
         val localMessage = LocalFallbackBuilder.build(files, chinese)
@@ -112,6 +119,7 @@ class CommitHelperService(private val project: Project) {
                 usedRepoTemplate = !skeleton.isNullOrBlank(),
                 includedFiles = files.size,
                 sampled = filterResult.sampled,
+                warning = missingDiffWarning,
             )
         }
 
@@ -134,8 +142,9 @@ class CommitHelperService(private val project: Project) {
                 filterResult = filterResult,
             )
             val config = state.let { CommitHelperSettings.getInstance().configFor(provider) }
-            val raw = LlmClient(protocol, config, apiKey).complete(prompt)
-            val parsed = LlmResponseParser.parse(raw)
+            val client = LlmClient(protocol, config, apiKey)
+            val raw = client.complete(prompt)
+            val parsed = LlmResponseParser.parse(raw) ?: retryWithCompactPrompt(client, prompt, config)
                 ?: throw IllegalStateException("Model answer was not valid JSON")
             val finalMessage = parsed.copy(issue = parsed.issue ?: extractedIssue)
             GenerationOutcome(
@@ -150,6 +159,7 @@ class CommitHelperService(private val project: Project) {
                 usedRepoTemplate = !skeleton.isNullOrBlank(),
                 includedFiles = files.size,
                 sampled = filterResult.sampled,
+                warning = missingDiffWarning,
             )
         } catch (e: Exception) {
             GenerationOutcome(
@@ -160,7 +170,30 @@ class CommitHelperService(private val project: Project) {
                 usedRepoTemplate = !skeleton.isNullOrBlank(),
                 includedFiles = files.size,
                 sampled = filterResult.sampled,
+                warning = missingDiffWarning,
             )
+        }
+    }
+
+    /**
+     * A large change set can exhaust the output budget and cut the JSON mid-object. Retry once
+     * with a bigger budget and a compact instruction before falling back to the local list.
+     */
+    private fun retryWithCompactPrompt(
+        client: LlmClient,
+        prompt: String,
+        config: ProviderConfig,
+    ): GeneratedMessage? {
+        val compact = prompt + """
+
+Return STRICTLY valid JSON only (no Markdown, no commentary).
+At most 8 items; each item text at most 40 characters.
+"""
+        return try {
+            val raw = client.complete(compact, maxTokens = (config.maxTokens * 2).coerceAtMost(8192))
+            LlmResponseParser.parse(raw)
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -222,6 +255,19 @@ class CommitHelperService(private val project: Project) {
             }
             append(if (chinese) "## 测试\n\n- [ ] 未验证" else "## Testing\n\n- [ ] Not verified")
         }
+    }
+
+    /** Null when diff content is present, disabled on purpose, or the changes are all binary. */
+    private fun buildDiffWarning(
+        includeDiff: Boolean,
+        files: List<FileChange>,
+        filterResult: FilterResult,
+    ): String? {
+        if (!includeDiff || files.isEmpty()) return null
+        if (filterResult.included.any { it.diffText.isNotBlank() }) return null
+        if (files.all { ExclusionRules.isBinaryPath(it.path) }) return null
+        return "Could not read git diff content for the checked changes; the message is based on " +
+            "file names only. Check Help → Show Log if this project spans multiple git repositories."
     }
 
     private fun repoRoot(context: CommitContext, files: List<FileChange>): File? {

@@ -118,6 +118,40 @@ class PromptBuilderTest {
         assertTrue(rendered.contains("(none)"))
         assertTrue(rendered.contains("(diff content disabled)"))
     }
+
+    @Test
+    fun `custom template without the marker still gets the detail contract`() {
+        val custom = "Summarize. Diff:\n{diff}"
+        val rendered = PromptBuilder.build(
+            promptTemplate = custom,
+            language = "Chinese",
+            formatTemplate = DefaultTemplates.FORMAT,
+            skeleton = null,
+            filterResult = filterResult,
+        )
+
+        assertTrue(rendered.contains(PromptBuilder.DETAIL_RULES_MARKER))
+        assertTrue(
+            rendered.contains("before → after"),
+            "the contract must ask for concrete before -> after detail",
+        )
+        assertTrue(rendered.contains("upgradeMode"))
+    }
+
+    @Test
+    fun `a template that already carries the marker is not patched twice`() {
+        val alreadyPatched = DefaultTemplates.PROMPT + "\n\n" + PromptBuilder.DETAIL_RULES_MARKER
+        val rendered = PromptBuilder.build(
+            promptTemplate = alreadyPatched,
+            language = "Chinese",
+            formatTemplate = DefaultTemplates.FORMAT,
+            skeleton = null,
+            filterResult = filterResult,
+        )
+
+        assertEquals(1, rendered.split(PromptBuilder.DETAIL_RULES_MARKER).size - 1)
+        assertFalse(rendered.contains("IMPORTANT — write change-level detail, not file-level labels."))
+    }
 }
 
 class LlmResponseParserTest {

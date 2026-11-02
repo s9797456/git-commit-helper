@@ -8,11 +8,13 @@ import com.caye.commithelper.service.ChangelogOutcome
 import com.caye.commithelper.service.CommitHelperService
 import com.caye.commithelper.service.GenerationOutcome
 import com.caye.commithelper.ui.ChangelogDialog
+import com.caye.commithelper.ui.CommitBoxSizing
 import com.caye.commithelper.ui.PreviewDialog
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
@@ -48,15 +50,33 @@ object CommitMessageWriter {
 object CommitHelperFlow {
 
     fun organize(project: Project, context: CommitContext, useLlm: Boolean = true) {
+        val app = ApplicationManager.getApplication()
+        // setLoading flips Swing state (disabled editor, spinner), so it must run on the EDT.
+        // Doing it from the background task left the commit box in a half-laid-out state and is a
+        // likely source of the painted-over/clipped text the user saw.
+        if (app.isDispatchThread) {
+            context.target.setLoading(true)
+        } else {
+            app.invokeLater { context.target.setLoading(true) }
+        }
         object : Task.Backgroundable(project, "Organizing Commit Message", true) {
             override fun run(indicator: ProgressIndicator) {
-                context.target.setLoading(true)
                 val outcome = try {
                     CommitHelperService(project).organize(context, indicator, useLlm)
-                } finally {
-                    ApplicationManager.getApplication().invokeLater { context.target.setLoading(false) }
+                } catch (_: ProcessCanceledException) {
+                    null
+                } catch (e: Exception) {
+                    GenerationOutcome(
+                        text = "",
+                        usedFallback = true,
+                        errorMessage = e.message ?: e.javaClass.simpleName,
+                    )
                 }
-                ApplicationManager.getApplication().invokeLater { applyOutcome(project, context, outcome) }
+                // One EDT callback: stop the spinner, write the text and resize in a deterministic order.
+                app.invokeLater {
+                    context.target.setLoading(false)
+                    outcome?.let { applyOutcome(project, context, it) }
+                }
             }
         }.queue()
     }
@@ -83,16 +103,22 @@ object CommitHelperFlow {
             return
         }
         CommitMessageWriter.write(project, context.target, outcome.text)
+        CommitBoxSizing.afterWrite(context.messageComponent)
 
+        val detail = outcome.warning?.let { "\n\n" + it }.orEmpty()
         when {
             outcome.usedFallback && outcome.errorMessage != null -> Notifier.warn(
                 project,
-                "Model call failed (${outcome.errorMessage}). Inserted the local grouping result instead.",
+                "Model call failed (${outcome.errorMessage}). Inserted the local grouping result instead." + detail,
                 retry = { organize(project, context, useLlm = true) },
             )
             outcome.usedFallback -> Notifier.info(
                 project,
-                "Inserted the local grouping result (${outcome.providerLabel}).",
+                "Inserted the local grouping result (${outcome.providerLabel})." + detail,
+            )
+            outcome.warning != null -> Notifier.warn(
+                project,
+                "Commit message generated with ${outcome.providerLabel}." + detail,
             )
             else -> Notifier.info(
                 project,
