@@ -22,6 +22,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
@@ -62,6 +63,8 @@ object CommitMessageWriter {
 
 /** Shared flow: collect the checked changes, generate in the background, then write. */
 object CommitHelperFlow {
+
+    private val LOG = Logger.getInstance(CommitHelperFlow::class.java)
 
     fun organize(
         project: Project,
@@ -126,11 +129,15 @@ object CommitHelperFlow {
         }
         object : Task.Backgroundable(project, title, true) {
             override fun run(indicator: ProgressIndicator) {
+                var canceled = false
                 val outcome = try {
                     generation(indicator)
                 } catch (_: ProcessCanceledException) {
+                    canceled = true
+                    LOG.info("Commit Helper: generation was canceled")
                     null
                 } catch (e: Exception) {
+                    LOG.warn("Commit Helper: generation threw: " + e.javaClass.simpleName + ": " + e.message)
                     GenerationOutcome(
                         text = "",
                         usedFallback = true,
@@ -139,8 +146,25 @@ object CommitHelperFlow {
                 }
                 // One EDT callback: stop the spinner, write the text and resize in a deterministic order.
                 app.invokeLater {
-                    context.target.setLoading(false)
-                    outcome?.let { applyOutcome(project, context, it, allowAppend) }
+                    try {
+                        context.target.setLoading(false)
+                    } catch (e: Exception) {
+                        LOG.warn("Commit Helper: could not stop the loading state", e)
+                    }
+                    try {
+                        outcome?.let { applyOutcome(project, context, it, allowAppend) }
+                        if (canceled && !project.isDisposed) {
+                            Notifier.info(project, CommitHelperBundle.message("notification.generationCanceled"))
+                        }
+                    } catch (e: Exception) {
+                        LOG.warn("Commit Helper: could not apply the generation outcome", e)
+                        if (!project.isDisposed) {
+                            Notifier.error(
+                                project,
+                                CommitHelperBundle.message("notification.applyFailed", e.message ?: e.javaClass.simpleName),
+                            )
+                        }
+                    }
                 }
             }
         }.queue()
@@ -162,17 +186,40 @@ object CommitHelperFlow {
         }.queue()
     }
 
+    /**
+     * Why a generation with no visible text still needs a message: blank text used to return
+     * silently after the confirmation dialog (reported 2026-11-04). Internal for the regression
+     * test in CommitMessageWriteTest.
+     */
+    internal fun blankResultMessage(outcome: GenerationOutcome): String? =
+        if (outcome.text.isNotBlank()) {
+            null
+        } else {
+            outcome.errorMessage ?: CommitHelperBundle.message("notification.emptyResult")
+        }
+
     private fun applyOutcome(
         project: Project,
         context: CommitContext,
         outcome: GenerationOutcome,
         allowAppend: Boolean,
     ) {
-        if (outcome.text.isBlank()) {
-            outcome.errorMessage?.let { Notifier.warn(project, it) }
+        val blankMessage = blankResultMessage(outcome)
+        if (blankMessage != null) {
+            LOG.warn("Commit Helper: generation produced no visible text: " + blankMessage)
+            Notifier.warn(project, blankMessage)
             return
         }
-        CommitMessageWriter.write(project, context.target, outcome.text, allowAppend)
+        try {
+            CommitMessageWriter.write(project, context.target, outcome.text, allowAppend)
+        } catch (e: Exception) {
+            LOG.warn("Commit Helper: could not write the generated message", e)
+            Notifier.error(
+                project,
+                CommitHelperBundle.message("notification.writeFailed", e.message ?: e.javaClass.simpleName),
+            )
+            return
+        }
         CommitBoxSizing.afterWrite(context.messageComponent)
 
         val detail = outcome.warning?.let { "\n\n" + it }.orEmpty()

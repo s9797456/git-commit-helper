@@ -33,6 +33,7 @@ import com.caye.commithelper.template.OutputLanguage
 import com.caye.commithelper.template.PromptBuilder
 import com.caye.commithelper.template.SkeletonReader
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -64,6 +65,8 @@ data class ChangelogOutcome(
 class CommitHelperService(private val project: Project) {
 
     private val settings: CommitHelperSettings get() = CommitHelperSettings.getInstance()
+
+    private val log: Logger get() = LOG
 
     fun organize(
         context: CommitContext,
@@ -168,11 +171,35 @@ class CommitHelperService(private val project: Project) {
             val config = settings.configFor(provider)
             val client = LlmClient(protocol, config, apiKey)
             val raw = client.complete(prompt)
-            val parsed = LlmResponseParser.parse(raw) ?: retryWithCompactPrompt(client, prompt, config)
+            log.info(
+                "Commit Helper: model response for " + provider.name + "/" + config.model +
+                    ": " + raw.length + " chars, prompt " + prompt.length + " chars",
+            )
+            val parsed = usable(LlmResponseParser.parse(raw)) ?: usable(retryWithCompactPrompt(client, prompt, config))
                 ?: throw IllegalStateException(CommitHelperBundle.message("error.invalidJson"))
             val finalMessage = parsed.copy(issue = parsed.issue ?: issue)
+            val rendered = render(finalMessage)
+            if (rendered.isBlank()) {
+                // Some reasoning/JSON-mode models answer with a subject but an empty items array.
+                // With an items-only template this renders to a newline and used to disappear
+                // without any feedback (reported 2026-11-04). Never leave the user without text.
+                log.warn(
+                    "Commit Helper: model answer rendered blank (subject=" + finalMessage.subject.length +
+                        " chars, items=" + finalMessage.items.size + ", format=" + template.format.length + " chars)",
+                )
+                return fallbackOutcome(
+                    localMessage = localMessage,
+                    render = { generated -> render(generated) },
+                    errorMessage = CommitHelperBundle.message("error.emptyModelMessage"),
+                    provider = provider,
+                    skeleton = skeleton,
+                    files = files,
+                    filterResult = filterResult,
+                    warning = missingDiffWarning,
+                )
+            }
             GenerationOutcome(
-                text = render(finalMessage),
+                text = rendered,
                 usedFallback = false,
                 providerLabel = provider.localizedName(),
                 usedRepoTemplate = !skeleton.isNullOrBlank(),
@@ -181,6 +208,7 @@ class CommitHelperService(private val project: Project) {
                 warning = missingDiffWarning,
             )
         } catch (e: Exception) {
+            log.warn("Commit Helper: generation failed: " + e.javaClass.simpleName + ": " + e.message)
             GenerationOutcome(
                 text = render(localMessage),
                 usedFallback = true,
@@ -245,13 +273,26 @@ class CommitHelperService(private val project: Project) {
             val parsed = LlmResponseParser.parse(raw) ?: retryWithCompactPrompt(client, prompt, config)
                 ?: throw IllegalStateException(CommitHelperBundle.message("error.invalidJson"))
             val preservedIssue = parsed.issue ?: IssueKeyExtractor.extract(null, listOf(current))
+            val rendered = MessageRenderer.render(
+                message = parsed.copy(issue = preservedIssue),
+                formatTemplate = template.format,
+                itemLineTemplate = template.itemLine,
+                skeleton = null,
+            )
+            if (rendered.isBlank()) {
+                log.warn(
+                    "Commit Helper: formatted answer rendered blank (subject=" + parsed.subject.length +
+                        " chars, items=" + parsed.items.size + ", format=" + template.format.length + " chars)",
+                )
+                return GenerationOutcome(
+                    text = "",
+                    usedFallback = true,
+                    errorMessage = CommitHelperBundle.message("error.emptyModelMessage"),
+                    providerLabel = provider.localizedName(),
+                )
+            }
             GenerationOutcome(
-                text = MessageRenderer.render(
-                    message = parsed.copy(issue = preservedIssue),
-                    formatTemplate = template.format,
-                    itemLineTemplate = template.itemLine,
-                    skeleton = null,
-                ),
+                text = rendered,
                 usedFallback = false,
                 providerLabel = provider.localizedName(),
             )
@@ -277,7 +318,8 @@ class CommitHelperService(private val project: Project) {
         val compact = prompt + """
 
 Return STRICTLY valid JSON only (no Markdown, no commentary).
-At most 8 items; each item text at most 40 characters.
+The items array must contain at least 1 item; at most 8 items; each item text at most 40 characters.
+If there is a subject but no usable item, put the concrete change in one item instead of returning an empty array.
 """
         return try {
             val raw = client.complete(compact, maxTokens = (config.maxTokens * 2).coerceAtMost(8192))
@@ -285,6 +327,34 @@ At most 8 items; each item text at most 40 characters.
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** A model answer without items cannot render an items-only template: retry instead. */
+    private fun usable(message: GeneratedMessage?): GeneratedMessage? =
+        message?.takeIf { it.items.isNotEmpty() }
+
+    /** Writes the local grouping when the model answer cannot produce visible text. */
+    private fun fallbackOutcome(
+        localMessage: GeneratedMessage,
+        render: (GeneratedMessage) -> String,
+        errorMessage: String,
+        provider: ProviderKind,
+        skeleton: String?,
+        files: List<FileChange>,
+        filterResult: FilterResult,
+        warning: String?,
+    ): GenerationOutcome {
+        val localText = render(localMessage).ifBlank { localMessage.subject }
+        return GenerationOutcome(
+            text = localText,
+            usedFallback = true,
+            errorMessage = errorMessage,
+            providerLabel = provider.localizedName(),
+            usedRepoTemplate = !skeleton.isNullOrBlank(),
+            includedFiles = files.size,
+            sampled = filterResult.sampled,
+            warning = warning,
+        )
     }
 
     /** M3: changelog for the checked changes plus a PR description for the current branch. */
@@ -453,6 +523,11 @@ At most 8 items; each item text at most 40 characters.
             ) == Messages.YES
         }
         if (app.isDispatchThread) show.run() else app.invokeAndWait(show)
+        log.info("Commit Helper: confirm send answered=" + answer + ", files=" + files.size + ", payload=" + filterResult.diffText.length)
         return answer
+    }
+
+    private companion object {
+        private val LOG: Logger = Logger.getInstance(CommitHelperService::class.java)
     }
 }

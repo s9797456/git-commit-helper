@@ -128,6 +128,33 @@ class PromptBuilderV2Test {
     }
 
     @Test
+    fun `diff and file list are appended when the profile omits both placeholders`() {
+        val rendered = build("请总结本次变更")
+
+        assertTrue(rendered.contains("Changed files:\nmodified src/App.kt (+3/-1)"))
+        assertTrue(rendered.contains("Diff:\n--- src/App.kt\n+a\n-b"))
+        assertEquals(1, rendered.occurrences("Changed files:"))
+        assertEquals(1, rendered.occurrences("Diff:"))
+    }
+
+    @Test
+    fun `only the missing diff block is appended`() {
+        val rendered = build("Files:\n{fileList}")
+
+        assertTrue(rendered.contains("Files:\nmodified src/App.kt (+3/-1)"))
+        assertTrue(rendered.contains("Diff:\n--- src/App.kt"))
+        assertEquals(1, rendered.occurrences("Diff:"))
+    }
+
+    @Test
+    fun `present diff and file list placeholders are not duplicated`() {
+        val rendered = build("Files:\n{fileList}\nDiff:\n{diff}")
+
+        assertEquals(0, rendered.occurrences("Changed files:"), "nothing may be appended when both placeholders exist")
+        assertEquals(1, rendered.occurrences("--- src/App.kt"))
+    }
+
+    @Test
     fun `the detail rules are appended exactly once`() {
         val rendered = build("Summarize:\n{diff}")
 

@@ -237,6 +237,15 @@ per-line length limit (for example "within 20 characters"):
         if (extra.isNotBlank() && !promptTemplate.contains("{extraContext}")) {
             suffix.append("\n\nAdditional context supplied by the user (must be honoured):\n").append(extra)
         }
+        // A saved profile is allowed to be prose only. Without these two blocks the model would
+        // receive no code at all, which is how a valid-looking prompt produced an empty items
+        // array (reported 2026-11-04). Append whichever context placeholder the profile omitted.
+        if (!promptTemplate.contains("{fileList}")) {
+            suffix.append("\n\nChanged files:\n").append(filterResult.fileListText)
+        }
+        if (!promptTemplate.contains("{diff}")) {
+            suffix.append("\n\nDiff:\n").append(filterResult.diffText.ifBlank { "(diff content disabled)" })
+        }
         if (!promptTemplate.contains(DETAIL_RULES_MARKER)) {
             suffix.append("\n\n").append(DETAIL_RULES)
         }

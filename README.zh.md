@@ -72,7 +72,7 @@ IDE 内：**Settings | Plugins | Marketplace** 搜索 *Commit Helper*，或打�
 | Base URL / Model / API key | 每个 provider 独立保存；key 存入 IDE 凭据库                                                                 |
 | Language                   | `中文` / `English` / `Auto (follow repository)`                                                   |
 | 格式模板                       | 占位符 `{subject}` `{items}` `{issue}` `{skeleton}`；条目行可用 `{type}` `{scope}` `{scopeRaw}` `{text}` |
-| 提示词模板                      | 占位符 `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}`                                  |
+| 提示词模板                      | 占位符 `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}`；未写的 `{diff}`/`{fileList}` 会自动追加 |
 | 限额                         | 单文件最大行数、总字符预算、附加排除 glob                                                                         |
 
 `{scope}` 有值时渲染为 ` (模块)`（含前导空格），无值时消失；因此  

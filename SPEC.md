@@ -514,10 +514,9 @@ com.caye.commithelper
        三个复制按钮（Format template、Item line、示例消息）。
      - 首次引导：新增 app 级 `onboardingShown` 标记；首次点击提交面板动作时发一次通知，按钮
        「打开指南」直接切到指南 tab；不阻断生成。
-     - 配置自检（只提示、不自动改）：`SettingsDiagnostics` 检查 6 类高信号问题——Format template
+     - 配置自检（只提示、不自动改）：`SettingsDiagnostics` 检查高信号问题——Format template
        为空/缺 `{items}`、误填标签或 `{text}`、Item line 为空、Item line 以列表符号开头且不含
-       `{type}`、`useRepoCommitTemplate=true`、项目引用的 prompt/template id 失效、提示词缺
-       `{fileList}`/`{diff}`；同一问题组合每个 IDE 会话最多通知一次，可「本次不再提示」。通知只针对
+       `{type}`、`useRepoCommitTemplate=true`、项目引用的 prompt/template id 失效；同一问题组合每个 IDE 会话最多通知一次，可「本次不再提示」。通知只针对
        ERROR 级（会破坏输出）问题，WARNING 级只在指南页显示。
      - 项目默认并入：删除 `projectConfigurable` EP；第 4 个 tab 通过项目下拉框选择已打开项目
        编辑其 `.idea/commit-helper.xml` 选择；无打开项目时显示提示并禁用；自动优先用当前活动项目
@@ -528,7 +527,25 @@ com.caye.commithelper
      - 文档同步：`plugin.xml` 插件描述、Marketplace `description.html`、README、`change-notes.html`
        增加初始化配置说明、正确模板值、排错步骤和 0.2.0 变更条目。
      - 测试：`SettingsDiagnosticsTest`（7 条）+ `SettingsPagesTest` 扩展到 5 个 tab/5 个页面并新增
-       横向滚动条断言、指南 tab 选中断言；总计 **177 个测试全绿**（29 个测试类）。
+       横向滚动条断言、指南 tab 选中断言；总计 0.2.0 时 **177 个测试全绿**（29 个测试类）。
+
+26. **0.2.1：确认发送后无响应（自定义 prompt 缺 diff 导致空 items）**：
+     - 现象：自定义 prompt 只包含规则和 `{language}` / `{types}`，未包含 `{diff}` / `{fileList}`；
+       用户确认发送 13 个文件（约 26,845 字符 diff）后，确认框消失，提交框不写入、无通知、无响应。
+       用户已确认模型连接正常。
+     - 根因链：`PromptBuilder.build` 只替换 prompt 中实际出现的占位符，未出现的 `{diff}` /
+       `{fileList}` 不会追加，模型**从未收到 diff**，返回 `{"subject":"变更汇总","items":[]}`；
+       `MessageRenderer` 以 `{items}` 渲染得到 `\n`；`CommitHelperFlow.applyOutcome` 对
+       `text.isBlank() && errorMessage == null` 直接 return，因此整条链路完全静默。
+     - 修复：`PromptBuilder` 在 profile 缺少 `{diff}` / `{fileList}` 时自动追加已勾选文件列表和 diff；
+       `CommitHelperService` 把空 items 视为不可用结果，触发一次紧凑重试（明确要求 items 至少 1 项），
+       仍为空则写入本地分组结果并明确提示；空结果、任务取消、写入失败、应用异常都给出通知；
+       生成请求/响应摘要写入 `idea.log`（`Commit Helper:` 前缀）。
+     - 诊断：移除会误导的 `PROMPT_MISSING_CONTEXT` 自检；指南补充「提示词可只写规则，插件自动追加
+       diff/文件列表」。
+     - 测试：`PromptBuilderV2Test` +3（缺少 diff/fileList 自动追加、只补缺失项、已有占位符不重复）、
+       `CommitMessageWriteTest` +1（空结果一定有通知文案）；总计 **181 个测试全绿**（29 个测试类）。
+
 
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 
@@ -541,7 +558,7 @@ com.caye.commithelper
 
 | 项 | 状态 |
 |---|---|
-| `./gradlew test`（177 个测试） | ✅ 通过（0.2.0 新增诊断自检、5 个设置页与横向滚动条回归测试） |
+| `./gradlew test`（181 个测试） | ✅ 通过（0.2.1 新增 prompt 上下文/空结果回归测试） |
 | `./gradlew buildPlugin`（产出 zip） | ✅ 通过，`build/distributions/git-commit-helper-0.1.0.zip` |
 | `patchPluginXml` 产出合法 plugin.xml（since-build 241、action/EP 齐全） | ✅ 已解包核对 |
 | `./gradlew verifyPlugin`（241 / 243 / 262） | ✅ 三版本全部 `Compatible`，各 1 处 deprecated API；报告里**无结构性问题**（即 `add-to-group` 的 group-id 在三版本均可解析）。改名后又复跑一次，结论一致 |

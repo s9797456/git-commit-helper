@@ -19,7 +19,6 @@ enum class DiagnosticCode(val severity: DiagnosticSeverity, val area: Diagnostic
     REPO_TEMPLATE_OVERRIDE(DiagnosticSeverity.WARNING, DiagnosticArea.GENERAL),
     PROJECT_PROMPT_MISSING(DiagnosticSeverity.WARNING, DiagnosticArea.PROJECT_DEFAULTS),
     PROJECT_TEMPLATE_MISSING(DiagnosticSeverity.WARNING, DiagnosticArea.PROJECT_DEFAULTS),
-    PROMPT_MISSING_CONTEXT(DiagnosticSeverity.WARNING, DiagnosticArea.COMMIT_CONTENT),
 }
 
 /** One found issue. [projectName] is set for project-scoped checks so the guide can point at the project. */
@@ -64,11 +63,6 @@ object SettingsDiagnostics {
 
         if (state.useRepoCommitTemplate) {
             result += Diagnostic(DiagnosticCode.REPO_TEMPLATE_OVERRIDE)
-        }
-
-        val prompt = EffectiveSettings.promptProfile(project).prompt
-        if (!prompt.contains("{fileList}") || !prompt.contains("{diff}")) {
-            result += Diagnostic(DiagnosticCode.PROMPT_MISSING_CONTEXT)
         }
 
         if (project != null) {

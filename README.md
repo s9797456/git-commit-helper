@@ -89,7 +89,7 @@ Install the zip through *Settings | Plugins | ⚙ | Install Plugin from Disk*.
 | Base URL / Model / API key | per provider; the key is stored in the IDE credential store |
 | Language | `中文`, `English`, `日本語`, `한국어`, `Auto (follow repository)` |
 | Format template | placeholders `{subject}` `{items}` `{issue}` `{skeleton}`; item line uses `{type}` `{scope}` `{scopeRaw}` `{text}` |
-| Prompt template | placeholders `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}` |
+| Prompt template | placeholders `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}`; omitted `{diff}`/`{fileList}` are appended automatically |
 | Limits | max lines per file, total character budget, extra exclude globs |
 
 `{scope}` renders as ` (module)` (leading space) when a scope exists and vanishes otherwise, so
@@ -113,8 +113,8 @@ Settings has five tabs: **General**, **LLM**, **Commit Content**, **Project defa
   labels "Format template:" / "Item line:" or `{text}` into Format template; `{text}` is
   only replaced in Item line, so it otherwise appears literally or the message goes blank.
 - A live self-check for empty/missing `{items}`, pasted labels, empty Item line, a bullet-prefixed
-  Item line, `.gitmessage` overriding the template, stale project selections and prompts missing
-  `{fileList}`/`{diff}`.
+  Item line, `.gitmessage` overriding the template and stale project selections. Prompt profiles
+  may omit `{diff}`/`{fileList}`: the plugin appends the checked file list and diff automatically.
 
 The first click on a commit-panel action shows a one-time onboarding notification that opens the
 guide; detected issues produce a session-deduplicated warning. Neither blocks generation.

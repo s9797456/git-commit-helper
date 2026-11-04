@@ -3,6 +3,7 @@ package com.caye.commithelper.action
 import com.caye.commithelper.adapter.CommitContextAdapter
 import com.caye.commithelper.adapter.CommitMessageTarget
 import com.caye.commithelper.adapter.LegacyMessageTarget
+import com.caye.commithelper.service.GenerationOutcome
 import com.caye.commithelper.ui.PreviewDialog
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataKey
@@ -40,6 +41,20 @@ class CommitMessageWriteTest : BasePlatformTestCase() {
     fun testAppendKeepsTheExistingTextAndSeparatesItByABlankLine() {
         val merged = CommitMessageWriter.merge("old message", "  new message  \n", PreviewDialog.Choice.APPEND)
         assertEquals("old message\n\nnew message\n", merged)
+    }
+
+    fun testBlankOutcomeAlwaysProducesANotificationMessage() {
+        assertNull(CommitHelperFlow.blankResultMessage(GenerationOutcome("feat: ok", usedFallback = false)))
+        assertEquals(
+            "boom",
+            CommitHelperFlow.blankResultMessage(
+                GenerationOutcome("  \n", usedFallback = true, errorMessage = "boom"),
+            ),
+        )
+        assertNotNull(
+            "a blank result without an explicit error must still explain itself",
+            CommitHelperFlow.blankResultMessage(GenerationOutcome("\n", usedFallback = false)),
+        )
     }
 
     fun testCancellingReturnsNullSoTheCallerLeavesTheBoxAlone() {
