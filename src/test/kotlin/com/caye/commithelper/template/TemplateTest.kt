@@ -201,7 +201,8 @@ class LlmResponseParserTest {
     }
 }
 
-class LanguageDetectorTest {
+// Renamed from LanguageDetectorTest: the full detector coverage now lives in LanguageDetectorTest.kt.
+class LegacyLanguageDetectorTest {
 
     @Test
     fun `detects chinese history`() {

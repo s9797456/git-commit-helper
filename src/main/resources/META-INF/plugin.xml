@@ -8,6 +8,11 @@
     a subject line plus an itemized body. Local, deterministic grouping runs first; an optional
     LLM (OpenAI-compatible, Anthropic or Gemini) only handles the wording. If the model is
     unavailable the plugin falls back to the local grouping result instead of failing.
+    Settings includes an in-IDE Guide tab with a 3-step setup, prompt/template field reference,
+    a live configuration self-check and the most common misconfiguration (pasting field labels or
+    {text} into Format template). Project defaults are the fourth settings tab, and every page
+    adapts to the IDE window width. The plugin description, README and change notes ship the same
+    setup/troubleshooting guidance.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -16,6 +21,8 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService
                 serviceImplementation="com.caye.commithelper.settings.CommitHelperSettings"/>
+        <projectService
+                serviceImplementation="com.caye.commithelper.settings.ProjectCommitHelperSettings"/>
         <applicationConfigurable
                 parentId="tools"
                 id="com.caye.commithelper.settings"
@@ -31,6 +38,22 @@
                 text="Organize Commit Message"
                 description="Organize the checked changes into a commit message (local grouping + optional LLM wording)">
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
+        </action>
+        <action id="com.caye.commithelper.GenerateWithContext"
+                class="com.caye.commithelper.action.GenerateWithContextAction"
+                icon="/icons/generateWithContext.svg"
+                text="Generate Commit Message with Context"
+                description="Generate a commit message with extra context: issue links, notes and Skip CI">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
+                          relative-to-action="com.caye.commithelper.OrganizeCommitMessage"/>
+        </action>
+        <action id="com.caye.commithelper.FormatCommitMessage"
+                class="com.caye.commithelper.action.FormatCommitMessageAction"
+                icon="/icons/formatMessage.svg"
+                text="Format Commit Message"
+                description="Reformat the existing commit message with the selected template (LLM)">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
+                          relative-to-action="com.caye.commithelper.GenerateWithContext"/>
         </action>
         <action id="com.caye.commithelper.GenerateChangelog"
                 class="com.caye.commithelper.action.GenerateChangelogAction"

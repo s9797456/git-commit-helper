@@ -1,5 +1,6 @@
 package com.caye.commithelper.adapter
 
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataKey
@@ -128,9 +129,8 @@ object CommitContextAdapter {
     private const val WORKFLOW_UI_KEY = "COMMIT_WORKFLOW_UI"
 
     /** Shown when the commit panel could not be read at all, rather than being empty. */
-    const val UNREADABLE_PANEL =
-        "Commit Helper could not read the commit panel. Please invoke the action from the commit " +
-            "message box (see idea.log for details)."
+    val UNREADABLE_PANEL: String
+        get() = CommitHelperBundle.message("error.unreadablePanel")
 
     fun read(project: Project, context: DataContext): CommitContext {
         val document = context.getData(VcsDataKeys.COMMIT_MESSAGE_DOCUMENT)

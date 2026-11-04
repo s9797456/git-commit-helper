@@ -13,9 +13,11 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
  */
 class PluginWiringTest : BasePlatformTestCase() {
 
-    fun testBothActionsAreRegisteredById() {
+    fun testAllCommitPanelActionsAreRegisteredById() {
         val manager = ActionManager.getInstance()
         assertNotNull("Organize action must be registered", manager.getAction(ORGANIZE_ID))
+        assertNotNull("Context action must be registered", manager.getAction(CONTEXT_ID))
+        assertNotNull("Format action must be registered", manager.getAction(FORMAT_ID))
         assertNotNull("Changelog action must be registered", manager.getAction(CHANGELOG_ID))
     }
 
@@ -25,8 +27,16 @@ class PluginWiringTest : BasePlatformTestCase() {
         assertNotNull("the platform group Vcs.MessageActionGroup must exist", group)
         val childIds = (group as ActionGroup).getChildren(null).mapNotNull { manager.getId(it) }
         assertTrue(
-            "Organize action should be in the commit message group, found: $childIds",
+            "Generate action should be in the commit message group, found: $childIds",
             childIds.contains(ORGANIZE_ID),
+        )
+        assertTrue(
+            "Context action should be in the commit message group, found: $childIds",
+            childIds.contains(CONTEXT_ID),
+        )
+        assertTrue(
+            "Format action should be in the commit message group, found: $childIds",
+            childIds.contains(FORMAT_ID),
         )
     }
 
@@ -60,6 +70,8 @@ class PluginWiringTest : BasePlatformTestCase() {
 
     private companion object {
         const val ORGANIZE_ID = "com.caye.commithelper.OrganizeCommitMessage"
+        const val CONTEXT_ID = "com.caye.commithelper.GenerateWithContext"
+        const val FORMAT_ID = "com.caye.commithelper.FormatCommitMessage"
         const val CHANGELOG_ID = "com.caye.commithelper.GenerateChangelog"
     }
 }

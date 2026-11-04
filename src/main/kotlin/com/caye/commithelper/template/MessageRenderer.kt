@@ -5,6 +5,7 @@ import com.caye.commithelper.model.FilterResult
 import com.caye.commithelper.model.ChangeItem
 import com.caye.commithelper.model.FileChange
 import com.caye.commithelper.group.LocalGrouper
+import com.caye.commithelper.settings.CommitType
 
 /** Renders a [GeneratedMessage] into the final commit message text. */
 object MessageRenderer {
@@ -130,33 +131,54 @@ object MessageRenderer {
 /** Builds the LLM-free fallback message from the local grouping. */
 object LocalFallbackBuilder {
 
-    fun build(files: List<FileChange>, chinese: Boolean): GeneratedMessage {
+    fun build(files: List<FileChange>, chinese: Boolean): GeneratedMessage =
+        build(files, if (chinese) OutputLanguage.CHINESE else OutputLanguage.ENGLISH)
+
+    fun build(files: List<FileChange>, language: OutputLanguage): GeneratedMessage {
         val groups = LocalGrouper.group(files)
         val modules = groups.map { it.name }
-        val subject = buildSubject(modules, chinese)
         return GeneratedMessage(
-            subject = subject,
-            items = LocalGrouper.itemize(groups, chinese),
+            subject = buildSubject(modules, language),
+            items = LocalGrouper.itemize(groups, language),
             issue = null,
         )
     }
 
-    fun buildSubject(modules: List<String>, chinese: Boolean): String {
+    fun buildSubject(modules: List<String>, chinese: Boolean): String =
+        buildSubject(modules, if (chinese) OutputLanguage.CHINESE else OutputLanguage.ENGLISH)
+
+    fun buildSubject(modules: List<String>, language: OutputLanguage): String {
         val shown = modules.take(3)
-        val text = if (chinese) shown.joinToString("、") else shown.joinToString(", ")
+        val separator = when (language) {
+            OutputLanguage.CHINESE, OutputLanguage.JAPANESE -> "、"
+            OutputLanguage.ENGLISH, OutputLanguage.KOREAN -> ", "
+        }
+        val text = shown.joinToString(separator)
         val suffix = if (modules.size > shown.size) {
-            if (chinese) " 等多个模块" else " and more"
+            when (language) {
+                OutputLanguage.CHINESE -> " 等多个模块"
+                OutputLanguage.ENGLISH -> " and more"
+                OutputLanguage.JAPANESE -> " など"
+                OutputLanguage.KOREAN -> " 외"
+            }
         } else {
             ""
         }
-        return if (chinese) "更新 $text$suffix" else "Update $text$suffix"
+        return when (language) {
+            OutputLanguage.CHINESE -> "更新 $text$suffix"
+            OutputLanguage.ENGLISH -> "Update $text$suffix"
+            OutputLanguage.JAPANESE -> "$text$suffix を更新"
+            OutputLanguage.KOREAN -> "$text$suffix 업데이트"
+        }
     }
 }
 
 /** Fills the user-editable prompt template. */
 object PromptBuilder {
 
-    val PROMPT_PLACEHOLDERS = listOf("{language}", "{format}", "{skeleton}", "{diff}", "{fileList}")
+    val PROMPT_PLACEHOLDERS = listOf(
+        "{language}", "{format}", "{skeleton}", "{diff}", "{fileList}", "{types}", "{extraContext}",
+    )
 
     /**
      * Marks the mandatory detail contract below. Templates that already contain it (e.g. a future
@@ -194,21 +216,82 @@ per-line length limit (for example "within 20 characters"):
         formatTemplate: String,
         skeleton: String?,
         filterResult: FilterResult,
+        types: List<CommitType> = emptyList(),
+        extraContext: String? = null,
     ): String {
+        val typesText = typeListText(types)
+        val extra = extraContext?.trim().orEmpty()
         val rendered = promptTemplate
             .replace("{language}", language)
             .replace("{format}", formatTemplate)
             .replace("{skeleton}", skeleton?.takeIf { it.isNotBlank() } ?: "(none)")
             .replace("{fileList}", filterResult.fileListText)
             .replace("{diff}", filterResult.diffText.ifBlank { "(diff content disabled)" })
-        return if (promptTemplate.contains(DETAIL_RULES_MARKER)) {
-            rendered
-        } else {
-            rendered.trimEnd() + "\n\n" + DETAIL_RULES + "\n"
+            .replace("{types}", typesText)
+            .replace("{extraContext}", extra.ifBlank { "(none)" })
+
+        val suffix = StringBuilder()
+        if (types.isNotEmpty() && !promptTemplate.contains("{types}")) {
+            suffix.append("\n\nIMPORTANT — the only allowed commit types are:\n").append(typesText)
         }
+        if (extra.isNotBlank() && !promptTemplate.contains("{extraContext}")) {
+            suffix.append("\n\nAdditional context supplied by the user (must be honoured):\n").append(extra)
+        }
+        if (!promptTemplate.contains(DETAIL_RULES_MARKER)) {
+            suffix.append("\n\n").append(DETAIL_RULES)
+        }
+        return if (suffix.isEmpty()) rendered else rendered.trimEnd() + suffix + "\n"
     }
 
-    /** True when none of the known prompt placeholders survived substitution. */
+    fun typeListText(types: List<CommitType>): String =
+        if (types.isEmpty()) {
+            "(none configured)"
+        } else {
+            types.joinToString("\n") { "- " + it.type + (if (it.description.isBlank()) "" else ": " + it.description) }
+        }
+
+    /** For the Format action: true when no known placeholder remains. */
     fun isFullySubstituted(rendered: String): Boolean =
         PROMPT_PLACEHOLDERS.none { rendered.contains(it) }
+
+    /** Used by FormatPromptBuilder so format output keeps the same concreteness floor. */
+    internal fun detailRules(): String = DETAIL_RULES
+}
+
+/**
+ * Builds the LLM prompt for "reformat the existing message". The selected prompt profile is
+ * included as style guidance, with diff-only placeholders replaced by a neutral note.
+ */
+object FormatPromptBuilder {
+
+    fun build(
+        language: String,
+        formatTemplate: String,
+        types: List<CommitType>,
+        currentMessage: String,
+        guidance: String,
+    ): String {
+        val typesText = PromptBuilder.typeListText(types)
+        val body = DefaultTemplates.FORMAT_PROMPT
+            .replace("{types}", typesText)
+            .replace("{language}", language)
+            .replace("{format}", formatTemplate)
+            .replace("{message}", currentMessage.trim())
+
+        val guidanceText = guidance.trim()
+            .replace("{language}", language)
+            .replace("{format}", formatTemplate)
+            .replace("{skeleton}", "(not available in this task)")
+            .replace("{diff}", "(not available in this task)")
+            .replace("{fileList}", "(not available in this task)")
+            .replace("{types}", typesText)
+            .replace("{extraContext}", "(none)")
+        val guidanceBlock = if (guidanceText.isBlank()) {
+            ""
+        } else {
+            "\n\nTeam writing rules (ignore rules that require data not available in this task):\n" + guidanceText
+        }
+        val rules = if (guidance.contains(PromptBuilder.DETAIL_RULES_MARKER)) "" else "\n\n" + PromptBuilder.detailRules()
+        return body + guidanceBlock + rules + "\n"
+    }
 }

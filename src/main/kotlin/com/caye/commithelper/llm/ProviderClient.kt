@@ -1,5 +1,6 @@
 package com.caye.commithelper.llm
 
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.caye.commithelper.settings.ProviderConfig
 import com.caye.commithelper.settings.ProviderKind
 import com.google.gson.JsonObject
@@ -75,12 +76,16 @@ object OpenAiCompatProtocol : LlmProtocol {
     override fun parseResponse(responseBody: String): String {
         val root = JsonParser.parseString(responseBody)
         val choices = root.asJsonObject.getAsJsonArray("choices")
-            ?: throw LlmException("OpenAI-compatible response has no 'choices'")
-        if (choices.size() == 0) throw LlmException("OpenAI-compatible response has empty 'choices'")
+            ?: throw LlmException(CommitHelperBundle.message("error.llm.openAi.noChoices"))
+        if (choices.size() == 0) {
+            throw LlmException(CommitHelperBundle.message("error.llm.openAi.emptyChoices"))
+        }
         val message = choices[0].asJsonObject.getAsJsonObject("message")
-            ?: throw LlmException("OpenAI-compatible response has no 'message'")
+            ?: throw LlmException(CommitHelperBundle.message("error.llm.openAi.noMessage"))
         val content = message.get("content")
-        if (content == null || content.isJsonNull) throw LlmException("OpenAI-compatible response has no content")
+        if (content == null || content.isJsonNull) {
+            throw LlmException(CommitHelperBundle.message("error.llm.openAi.noContent"))
+        }
         return content.asString
     }
 }
@@ -122,7 +127,7 @@ object AnthropicProtocol : LlmProtocol {
 
     override fun parseResponse(responseBody: String): String {
         val content = JsonParser.parseString(responseBody).asJsonObject.getAsJsonArray("content")
-            ?: throw LlmException("Anthropic response has no 'content'")
+            ?: throw LlmException(CommitHelperBundle.message("error.llm.anthropic.noContent"))
         val sb = StringBuilder()
         for (element in content) {
             val obj = element.asJsonObject
@@ -130,7 +135,7 @@ object AnthropicProtocol : LlmProtocol {
                 sb.append(obj.get("text")?.asString.orEmpty())
             }
         }
-        if (sb.isEmpty()) throw LlmException("Anthropic response contains no text block")
+        if (sb.isEmpty()) throw LlmException(CommitHelperBundle.message("error.llm.anthropic.noText"))
         return sb.toString()
     }
 }
@@ -172,20 +177,26 @@ object GeminiProtocol : LlmProtocol {
     override fun parseResponse(responseBody: String): String {
         val root = JsonParser.parseString(responseBody).asJsonObject
         val candidates = root.getAsJsonArray("candidates")
-            ?: throw LlmException("Gemini response has no 'candidates'")
+            ?: throw LlmException(CommitHelperBundle.message("error.llm.gemini.noCandidates"))
         if (candidates.size() == 0) {
             val blockReason = root.getAsJsonObject("promptFeedback")?.get("blockReason")?.asString
-            throw LlmException("Gemini returned no candidates" + (blockReason?.let { " (blocked: $it)" } ?: ""))
+            throw LlmException(
+                if (blockReason == null) {
+                    CommitHelperBundle.message("error.llm.gemini.noCandidates")
+                } else {
+                    CommitHelperBundle.message("error.llm.gemini.blocked", blockReason)
+                },
+            )
         }
         val parts = candidates[0].asJsonObject
             .getAsJsonObject("content")
             ?.getAsJsonArray("parts")
-            ?: throw LlmException("Gemini response has no parts")
+            ?: throw LlmException(CommitHelperBundle.message("error.llm.gemini.noParts"))
         val sb = StringBuilder()
         for (element in parts) {
             element.asJsonObject.get("text")?.let { if (!it.isJsonNull) sb.append(it.asString) }
         }
-        if (sb.isEmpty()) throw LlmException("Gemini response contains no text part")
+        if (sb.isEmpty()) throw LlmException(CommitHelperBundle.message("error.llm.gemini.noText"))
         return sb.toString()
     }
 }
@@ -199,8 +210,8 @@ class LlmClient(
 ) {
 
     fun complete(prompt: String, maxTokens: Int = config.maxTokens, temperature: Double = config.temperature): String {
-        if (config.baseUrl.isBlank()) throw LlmException("Base URL is not configured")
-        if (config.model.isBlank()) throw LlmException("Model is not configured")
+        if (config.baseUrl.isBlank()) throw LlmException(CommitHelperBundle.message("error.llm.baseUrlMissing"))
+        if (config.model.isBlank()) throw LlmException(CommitHelperBundle.message("error.llm.modelMissing"))
 
         val spec = protocol.buildRequest(config, apiKey, prompt, maxTokens, temperature)
         val request = HttpRequest.newBuilder(URI.create(spec.url))
@@ -212,12 +223,19 @@ class LlmClient(
         val response = try {
             httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         } catch (e: Exception) {
-            throw LlmException("Request failed: ${e.message}", e)
+            throw LlmException(CommitHelperBundle.message("error.llm.requestFailed", e.message.orEmpty()), e)
         }
 
         val status = response.statusCode()
         if (status !in 200..299) {
-            throw LlmException("${protocol.displayName} returned HTTP $status: ${sanitize(response.body())}")
+            throw LlmException(
+                CommitHelperBundle.message(
+                    "error.llm.httpStatus",
+                    protocol.displayName,
+                    status,
+                    sanitize(response.body()),
+                ),
+            )
         }
         return protocol.parseResponse(response.body())
     }

@@ -43,6 +43,41 @@ Diff:
 {diff}
 """.trim()
 
+
+    /**
+     * Default allowed commit types. Users can edit the list in Settings | Commit Content.
+     * Descriptions are shown to the model so it can pick the right type.
+     */
+    val DEFAULT_TYPES: List<com.caye.commithelper.settings.CommitType> = listOf(
+        com.caye.commithelper.settings.CommitType("feat", "new feature"),
+        com.caye.commithelper.settings.CommitType("fix", "bug fix"),
+        com.caye.commithelper.settings.CommitType("docs", "documentation only"),
+        com.caye.commithelper.settings.CommitType("style", "formatting, missing semicolons, no code change"),
+        com.caye.commithelper.settings.CommitType("refactor", "code change that neither fixes a bug nor adds a feature"),
+        com.caye.commithelper.settings.CommitType("perf", "performance improvement"),
+        com.caye.commithelper.settings.CommitType("test", "adding or fixing tests"),
+        com.caye.commithelper.settings.CommitType("build", "build system or dependencies"),
+        com.caye.commithelper.settings.CommitType("ci", "CI configuration"),
+        com.caye.commithelper.settings.CommitType("chore", "other changes that do not modify src or test"),
+        com.caye.commithelper.settings.CommitType("revert", "revert a previous commit"),
+    )
+
+    /**
+     * Prompt for the Format action (LLM-only). The user's selected prompt profile is appended as
+     * style guidance by FormatPromptBuilder; this template carries the hard output contract.
+     */
+    const val FORMAT_PROMPT: String = "" +
+        "You reformat an existing commit message. Keep its factual meaning, do not invent changes.\n" +
+        "Rules:\n" +
+        "- Answer with STRICT JSON only: no prose, no Markdown fences, no trailing explanation.\n" +
+        "- Schema: {\"subject\": string, \"items\": [{\"type\": string, \"scope\": string, \"text\": string}], \"issue\": string|null}\n" +
+        "- Use only the allowed commit types: {types}.\n" +
+        "- Preserve issue links and skip-ci markers found in the original message; put them in \"issue\" or in item text.\n" +
+        "- Write the text in {language}.\n" +
+        "- Keep the same number of distinct changes as the original message; merge duplicates only.\n" +
+        "- The final layout must follow:\n{format}\n" +
+        "- Existing message:\n---\n{message}\n---\n"
+
     /** Built-in one-click presets for the format template. */
     enum class FormatPreset(val displayName: String, val format: String, val itemLine: String) {
         CONVENTIONAL(

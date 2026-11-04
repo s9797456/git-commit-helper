@@ -15,12 +15,25 @@
 
 <h3>Features</h3>
 <ul>
-  <li><b>Toolbar action in the commit message box</b> — click <i>Organize Commit Message</i> and
-    review the proposal in the preview dialog (replace, append or cancel).</li>
+  <li><b>Three commit-panel actions</b> — <i>Generate Commit Message</i>, <i>Generate Commit
+    Message with Context</i> (issue links, notes and Skip CI) and <i>Format Commit Message</i>
+    (reformat an existing draft with the selected template). Each can be shown or hidden.</li>
   <li><b>Hybrid generation</b> — file/module grouping is computed locally; the LLM only rewrites
     the wording.</li>
-  <li><b>Editable templates</b> — output format template and prompt template, both with presets
-    (Conventional Commits style by default).</li>
+  <li><b>Reusable prompt profiles and commit templates</b> — create, duplicate, rename, edit and
+    delete them; the built-in Default entries are protected. Global and per-project defaults, with
+    the project selection taking precedence; project defaults are edited in the fourth settings tab.</li>
+  <li><b>In-IDE Guide and configuration self-check</b> — the last settings tab has a 3-step setup,
+    prompt/template placeholder reference, exact template values, common misconfiguration examples
+    and a live check for empty templates, pasted field labels, <code>{text}</code> in the wrong
+    field, <code>.gitmessage</code> overrides and stale project selections. One-time onboarding
+    notification points to the guide; warnings never block generation.</li>
+  <li><b>Responsive settings pages</b> — pages follow the IDE window width, avoid horizontal
+    scrollbars and let the template editor/preview grow with the dialog.</li>
+  <li><b>Commit type management</b> — maintain the allowed types and descriptions used by the model,
+    with Conventional Commit types preloaded.</li>
+  <li><b>Skip CI presets</b> — configurable markers, appended at the end of the message or as a
+    subject prefix.</li>
   <li><b>Repository commit template</b> — an existing <code>.gitmessage</code> /
     <code>git config commit.template</code> is used as the output skeleton, and its comment lines
     are preserved.</li>
@@ -30,15 +43,18 @@
     are written and no git commands are executed.</li>
   <li><b>Multi-vendor LLM support</b> — OpenAI-compatible endpoints, Anthropic and Gemini, each
     configurable, with a <i>local only</i> mode.</li>
-  <li><b>Chinese and English output</b> — switchable per generation.</li>
+  <li><b>English, Chinese, Japanese and Korean UI</b> — the interface follows the IDE locale;
+    generated messages can be written in Chinese, English, Japanese or Korean (Auto detects the
+    language from recent history).</li>
 </ul>
 
 <h3>Getting started</h3>
 <ol>
-  <li>Open <b>Settings | Tools | Commit Helper</b> and pick a provider, or stay on <i>Local only</i>
-    (no account needed).</li>
+  <li>Open <b>Settings | Tools | Commit Helper</b>. The first time, open the last tab
+    <b>Guide</b>: it has a 3-step setup and a live configuration check. Pick a provider, or stay
+    on <i>Local only</i> (no account needed).</li>
   <li>Check the files you want in the commit tool window, click the commit message box, then click
-    <i>Organize Commit Message</i> in its toolbar.</li>
+    <i>Generate Commit Message</i> in its toolbar.</li>
   <li>Review the proposal, then replace or append.</li>
 </ol>
 
@@ -46,6 +62,15 @@
   Large changesets are sampled and noisy files (lock files, build output, minified bundles,
   binaries) are summarised instead of being sent in full. Unversioned files are read from disk;
   files larger than 1 MB are skipped.
+</p>
+
+<h3>Configuration help</h3>
+<p>
+  The most common setup mistake is pasting the field labels into the inputs. The two template
+  fields are exactly <code>Format template = {items}</code> and <code>Item line = {text}</code>;
+  <code>{text}</code> is only replaced in Item line. Putting it in Format template (or pasting
+  &quot;Format template:&quot; / &quot;Item line:&quot;) makes the output contain those literal
+  texts or becomes empty. The Guide tab shows the same explanation, copy buttons and a self-check.
 </p>
 
 <h3>Privacy</h3>

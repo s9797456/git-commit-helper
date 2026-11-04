@@ -3,6 +3,7 @@ package com.caye.commithelper.group
 import com.caye.commithelper.model.ChangeGroup
 import com.caye.commithelper.model.ChangeItem
 import com.caye.commithelper.model.FileChange
+import com.caye.commithelper.template.OutputLanguage
 
 /** Coarse bucket of a changed file, derived from its path only. */
 enum class FileCategory(val commitType: String) {
@@ -95,7 +96,10 @@ object LocalGrouper {
      * Converts groups into itemized body lines. Used for the local fallback message and
      * as the skeleton shown to the model.
      */
-    fun itemize(groups: List<ChangeGroup>, chinese: Boolean): List<ChangeItem> {
+    fun itemize(groups: List<ChangeGroup>, chinese: Boolean): List<ChangeItem> =
+        itemize(groups, if (chinese) OutputLanguage.CHINESE else OutputLanguage.ENGLISH)
+
+    fun itemize(groups: List<ChangeGroup>, language: OutputLanguage): List<ChangeItem> {
         val items = ArrayList<ChangeItem>()
         for (group in groups) {
             val byCategory = group.files.groupBy { ChangeClassifier.categorize(it.path) }
@@ -111,7 +115,7 @@ object LocalGrouper {
                     ChangeItem(
                         type = type,
                         scope = group.name,
-                        text = describe(categoryFiles, added, removed, chinese),
+                        text = describe(categoryFiles, added, removed, language),
                     ),
                 )
             }
@@ -119,19 +123,24 @@ object LocalGrouper {
         return items
     }
 
-    private fun describe(files: List<FileChange>, added: Int, removed: Int, chinese: Boolean): String {
+    private fun describe(files: List<FileChange>, added: Int, removed: Int, language: OutputLanguage): String {
         val names = files.map { it.path.substringAfterLast('/') }
         val shown = names.take(3)
-        val suffix = if (names.size > shown.size) {
-            if (chinese) " 等 ${names.size} 个文件" else " and ${names.size - shown.size} more"
-        } else {
-            ""
+        val omitted = names.size - shown.size
+        val separator = when (language) {
+            OutputLanguage.CHINESE, OutputLanguage.JAPANESE -> "、"
+            OutputLanguage.KOREAN, OutputLanguage.ENGLISH -> ", "
         }
-        val fileList = if (chinese) shown.joinToString("、") else shown.joinToString(", ")
-        return if (chinese) {
-            "${files.size} 个文件变更（+$added/-$removed）：$fileList$suffix"
-        } else {
-            "${files.size} file(s) changed (+$added/-$removed): $fileList$suffix"
+        val fileList = shown.joinToString(separator)
+        return when (language) {
+            OutputLanguage.CHINESE ->
+                "${files.size} 个文件变更（+$added/-$removed）：$fileList" + if (omitted > 0) " 等 ${names.size} 个文件" else ""
+            OutputLanguage.ENGLISH ->
+                "${files.size} file(s) changed (+$added/-$removed): $fileList" + if (omitted > 0) " and $omitted more" else ""
+            OutputLanguage.JAPANESE ->
+                "${files.size} ファイル変更（+$added/-$removed）：$fileList" + if (omitted > 0) " など ${names.size} ファイル" else ""
+            OutputLanguage.KOREAN ->
+                "파일 ${files.size}개 변경 (+$added/-$removed): $fileList" + if (omitted > 0) " 외 ${omitted}개" else ""
         }
     }
 }

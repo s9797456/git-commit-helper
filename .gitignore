@@ -13,3 +13,6 @@ local.properties
 *.pem
 *.crt
 publish-env.sh
+
+# Kotlin compiler session dir
+.kotlin/

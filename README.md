@@ -23,10 +23,23 @@ page for them, while the badges above are the GitHub-friendly equivalent.
 
 ## Features
 
-- **Toolbar action in the commit message box** — click *Organize Commit Message*; nothing is
-  sent until you click.
+- **Three toolbar actions** — *Generate Commit Message*, *Generate Commit Message with Context*
+  (issue links, notes, Skip CI) and *Format Commit Message*; each can be hidden in settings.
+  Nothing is sent until you click.
 - **Hybrid generation** — deterministic file/module grouping locally, LLM wording on top.
-- **Editable templates** — output format template and prompt template, with presets.
+- **Reusable prompt profiles and commit templates** — CRUD for both, protected built-in
+  *Default* entries, and global/per-project defaults (project defaults live in the fourth
+  settings tab).
+- **In-IDE Guide and configuration self-check** — the last settings tab walks through a 3-step
+  setup, documents every placeholder and flags the common misconfiguration where field labels or
+  `{text}` are pasted into Format template. The first toolbar click shows a one-time pointer to
+  the guide; issues are reported but never block generation.
+- **Responsive settings pages** — pages track the IDE window width, never grow a horizontal
+  scrollbar, and the template editor/preview grows with the dialog.
+- **Commit type management** — keep the allowed types and descriptions used by the model.
+- **Skip CI presets** — configurable markers appended at the end or as a subject prefix.
+- **English, Chinese, Japanese and Korean UI** — follows the IDE locale; generated messages can
+  also be written in Japanese or Korean.
 - **Repository commit template** — `.gitmessage` / `git config commit.template` is used as the
   output skeleton and its comment lines are preserved.
 - **Issue key injection** — `{issue}` is extracted from the branch name or recent commits
@@ -74,7 +87,7 @@ Install the zip through *Settings | Plugins | ⚙ | Install Plugin from Disk*.
 |---|---|
 | Provider | `OpenAI-compatible`, `Anthropic`, `Gemini`, or `Local only (no LLM)` |
 | Base URL / Model / API key | per provider; the key is stored in the IDE credential store |
-| Language | `中文`, `English`, `Auto (follow repository)` |
+| Language | `中文`, `English`, `日本語`, `한국어`, `Auto (follow repository)` |
 | Format template | placeholders `{subject}` `{items}` `{issue}` `{skeleton}`; item line uses `{type}` `{scope}` `{scopeRaw}` `{text}` |
 | Prompt template | placeholders `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}` |
 | Limits | max lines per file, total character budget, extra exclude globs |
@@ -87,6 +100,24 @@ snapshots) are excluded before anything is sent. Oversized diffs are truncated p
 sampled to the character budget, and the prompt says so explicitly.
 
 [中文说明](README.zh.md)
+
+## Configuration help
+
+Settings has five tabs: **General**, **LLM**, **Commit Content**, **Project defaults** and
+**Guide**. The Guide tab is the in-IDE troubleshooting entry point:
+
+- 3-step setup for language, provider and prompt/template defaults.
+- Placeholder reference for Format template (`{subject}`, `{items}`, `{issue}`,
+  `{skeleton}`) and Item line (`{type}`, `{scope}`, `{scopeRaw}`, `{text}`).
+- The exact field values and a copy button for each. The most common mistake is pasting the
+  labels "Format template:" / "Item line:" or `{text}` into Format template; `{text}` is
+  only replaced in Item line, so it otherwise appears literally or the message goes blank.
+- A live self-check for empty/missing `{items}`, pasted labels, empty Item line, a bullet-prefixed
+  Item line, `.gitmessage` overriding the template, stale project selections and prompts missing
+  `{fileList}`/`{diff}`.
+
+The first click on a commit-panel action shows a one-time onboarding notification that opens the
+guide; detected issues produce a session-deduplicated warning. Neither blocks generation.
 
 ## License
 

@@ -1,5 +1,6 @@
 package com.caye.commithelper.ui
 
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
@@ -23,6 +24,7 @@ class PreviewDialog(
     project: Project,
     private val currentText: String,
     private val generatedText: String,
+    private val allowAppend: Boolean = true,
 ) : DialogWrapper(project) {
 
     enum class Choice { NONE, REPLACE, APPEND }
@@ -31,24 +33,31 @@ class PreviewDialog(
         private set
 
     init {
-        title = "Commit Helper — Generated Commit Message"
+        title = CommitHelperBundle.message("dialog.preview.title")
         isResizable = true
         init()
     }
 
     override fun createCenterPanel(): JComponent {
         val panel = JPanel(GridLayout(1, 2, JBUI.scale(8), 0))
-        panel.add(labeled("Current message", textArea(currentText)))
-        panel.add(labeled("Generated message", textArea(generatedText)))
+        panel.add(labeled(CommitHelperBundle.message("dialog.preview.currentMessage"), textArea(currentText)))
+        panel.add(labeled(CommitHelperBundle.message("dialog.preview.generatedMessage"), textArea(generatedText)))
         panel.preferredSize = Dimension(JBUI.scale(980), JBUI.scale(420))
         return panel
     }
 
-    override fun createActions(): Array<Action> = arrayOf(
-        choiceAction("Replace", Choice.REPLACE),
-        choiceAction("Append to end", Choice.APPEND),
-        cancelAction,
-    )
+    override fun createActions(): Array<Action> = if (allowAppend) {
+        arrayOf(
+            choiceAction(CommitHelperBundle.message("dialog.preview.replace"), Choice.REPLACE),
+            choiceAction(CommitHelperBundle.message("dialog.preview.append"), Choice.APPEND),
+            cancelAction,
+        )
+    } else {
+        arrayOf(
+            choiceAction(CommitHelperBundle.message("dialog.preview.replace"), Choice.REPLACE),
+            cancelAction,
+        )
+    }
 
     private fun choiceAction(label: String, value: Choice): Action = object : AbstractAction(label) {
         override fun actionPerformed(e: ActionEvent) {

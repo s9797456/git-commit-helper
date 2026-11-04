@@ -2,9 +2,12 @@ package com.caye.commithelper.service
 
 import com.caye.commithelper.adapter.CommitContext
 import com.caye.commithelper.adapter.NoOpTarget
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.caye.commithelper.settings.CommitHelperSettings
+import com.caye.commithelper.settings.CommitTemplate
 import com.caye.commithelper.settings.LanguageOption
 import com.caye.commithelper.settings.ProviderKind
+import com.caye.commithelper.settings.newSettingsId
 import com.caye.commithelper.template.DefaultTemplates
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.vcsUtil.VcsUtil
@@ -120,7 +123,7 @@ class LocalPipelineTest : BasePlatformTestCase() {
             val outcome = CommitHelperService(project)
                 .organize(CommitContext(project, NoOpTarget(), emptyList(), emptyList()), null)
             assertEquals("", outcome.text)
-            assertEquals("No changes to organize.", outcome.errorMessage)
+            assertEquals(CommitHelperBundle.message("error.noChangesToOrganize"), outcome.errorMessage)
         }
     }
 
@@ -141,7 +144,13 @@ class LocalPipelineTest : BasePlatformTestCase() {
         check(code == 0) { "git ${args.joinToString(" ")} failed with $code: $output" }
     }
 
-    /** Applies settings for the duration of [block] and restores the previous values. */
+    /**
+     * Applies settings for the duration of [block] and restores the previous values.
+     *
+     * 0.2.0 renders from the template library, not the legacy `formatTemplate` field (kept for
+     * migration only), so a non-default format is installed as a temporary [CommitTemplate] and
+     * selected as the global default for the duration of the test.
+     */
     private fun <T> withSettings(
         provider: ProviderKind,
         language: LanguageOption,
@@ -151,19 +160,34 @@ class LocalPipelineTest : BasePlatformTestCase() {
         val state = CommitHelperSettings.getInstance().state
         val savedProvider = state.provider
         val savedLanguage = state.language
-        val savedFormat = state.formatTemplate
         val savedUseTemplate = state.useRepoCommitTemplate
+        val savedDefaultTemplateId = state.defaultTemplateId
+        val temporaryTemplate = if (formatTemplate == DefaultTemplates.FORMAT) {
+            null
+        } else {
+            CommitTemplate(
+                id = newSettingsId(),
+                name = "test template",
+                format = formatTemplate,
+                itemLine = DefaultTemplates.ITEM_LINE,
+            ).also {
+                state.commitTemplates.add(it)
+                state.defaultTemplateId = it.id
+            }
+        }
         try {
             state.provider = provider
             state.language = language
-            state.formatTemplate = formatTemplate
             state.useRepoCommitTemplate = false
             return block()
         } finally {
             state.provider = savedProvider
             state.language = savedLanguage
-            state.formatTemplate = savedFormat
             state.useRepoCommitTemplate = savedUseTemplate
+            if (temporaryTemplate != null) {
+                state.commitTemplates.remove(temporaryTemplate)
+                state.defaultTemplateId = savedDefaultTemplateId
+            }
         }
     }
 }

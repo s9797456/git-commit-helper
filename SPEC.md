@@ -451,6 +451,85 @@ com.caye.commithelper
     - 测试：新增 `RepoPathTest`（4）、`CommitBoxSizingTest`（6）、`PromptBuilderTest`（2），
       总计 **79 个测试全绿**（`./gradlew test`）。
 
+
+22. **0.2.0：动作矩阵、prompt/模板复用、项目级默认、类型管理、i18n（scope B）**：
+    - 动作：新增 `GenerateWithContextAction`（弹窗收集 issue/PR、补充说明、Skip CI 预设；issue 候选从
+      分支名/上次输入预填，输入按项目记忆）与 `FormatCommitMessageAction`（LLM 解析现有消息 → 结构化 JSON
+      → 按当前模板重排；失败不改原文，默认隐藏）。三个提交面板动作（生成/带上下文生成/格式化）通过
+      `ActionUpdateThread.EDT` 的 `update` 独立控制 `presentation.isVisible`。
+    - Skip CI：`SkipCiApplier` 纯函数，预设列表默认 `[skip ci]`/`[ci skip]`，支持追加到消息末尾或
+      subject 前缀；只在渲染后本地追加，不交给模型。
+    - Prompt profiles：`PromptProfile(id,name,prompt,builtIn)` 全局库 + 新建/复制/重命名/编辑/删除；
+      内置 Default 受保护；旧 `promptTemplate` 在 `loadState` 一次性迁移为 `My prompt`，`migratedTo02`
+      防止重复迁移。模板同理（`CommitTemplate` + 受保护 Default + 旧 format/itemLine 迁移）。
+    - 项目级：`ProjectCommitHelperSettings`（`.idea/commit-helper.xml`）只存 prompt/模板的选择与
+      上次 extra-context 输入；`EffectiveSettings` 解析顺序 project → global → built-in。
+    - 类型管理：`CommitType(type, description)` 列表，默认 11 个 Conventional 类型；`PromptBuilder`
+      在模板缺少 `{types}` 时追加允许类型（含描述），约束模型尽量只使用已维护的类型。
+    - 提示词：`PromptBuilder` 新增 `{types}`/`{extraContext}` 占位符；缺失时自动追加允许类型与
+      用户附加上下文，并保留既有 `DETAIL_RULES` 追加逻辑；`FormatPromptBuilder` 复用 detail rules。
+    - 输出语言：`OutputLanguage`（中/英/日/韩）+ `LanguageDetector`（假名→日、谚文→韩、CJK 比例→中、
+      否则英）；本地降级文案也按四种语言输出。
+    - 设置 UI：`CommitHelperConfigurable` 改为 `Configurable.Composite`，拆为 General / LLM /
+      Commit Content 三页；新增项目级 `ProjectDefaultsConfigurable`（Tools | Commit Helper）；
+      Commit Content 含 prompt/模板 CRUD、模板编辑 + 实时预览（`JBSplitter`）、类型表格（`JBTable` +
+      `ToolbarDecorator`）。
+    - i18n：`i18n/CommitHelperBundle`（`AbstractBundle`）+ 4 份 properties（EN/ZH/JA/KO，157 key 严格对齐，
+      `BundleKeyTest` 校验 key/占位符/非空）；动作文案在 `update` 里按 locale 设置 presentation，
+      settings/对话框/通知/ProviderClient 错误均已本地化。
+    - 修复/加固：韩语模块分隔符改为 `", "`；移除 `generateWithContext` 中重复的 GitOps 查询；
+      FormatPromptBuilder 在 guidance 已含 detail 标记时不重复追加。
+    - 测试：新增 7 个纯逻辑测试文件（77 条）+ `SettingsPagesTest`（5 条）+ `PluginWiringTest` 扩展到
+      3 个动作；总计 **165 个测试全绿**（27 个测试类）。
+
+
+23. **0.2.0 开发期修复：带上下文生成在 EDT 上跑 git 导致内部错误**：
+    - 现象：点击 `Generate Commit Message with Context` 弹出 IDE 内部错误
+      `Assertion failed: Should not wait for built-in server on EDT`，插件被标为 culprit，随后动作中断。
+    - 根因：`CommitHelperFlow.generateWithContext` 在 EDT 直接调用 `detectIssue` → `GitOps.branchName/recentSubjects`
+      同步执行 git；git4idea 在 HTTP 认证准备阶段 `waitForStart` 内置服务器，而平台断言禁止在 EDT 上等待。
+    - 修复：把 issue 预填计算放到 `Task.Backgroundable`，完成后 `invokeLater` 回到 EDT 打开 `ExtraContextDialog`；
+      检测异常捕获后降级为空候选，不阻塞弹窗。新增 bundle key `task.preparingContext`（四语言）。
+    - 验证：`compileKotlin`、`test`（164）全绿；0.2.1 重新构建并签名。
+
+
+24. **0.2.0 开发期修复：设置页只显示一行说明文字**：
+    - 现象：Settings | Tools | Commit Helper 只有一个 HTML 说明，没有 General / LLM / Commit Content。
+    - 根因：新版平台 `SettingsTreeView.MyNode` 只对**实际类型**实现 `Configurable.Composite` 的对象展开子节点；
+      但 `applicationConfigurable` EP 注册的实例会被 `ConfigurableWrapper.wrapConfigurable` 包成普通
+      `ConfigurableWrapper`（非 `CompositeWrapper`），`instanceof Composite` 为 false，因此子页永远不会出现在设置树里，
+      而根 `createComponent` 返回的只是占位说明。
+    - 修复：`CommitHelperConfigurable.createComponent` 直接构建 `JBTabbedPane`，把三个子页作为 tab 挂上去；
+      `isModified/apply/reset/disposeUIResources` 仍委托子页。保留 `Configurable.Composite`（测试/工具枚举用），
+      但显示不再依赖平台展开。
+    - 回归测试：`SettingsPagesTest.testRootComponentRendersTheThreePagesAsTabs` 断言根组件内有 3 个 tab。
+
+25. **0.2.0：使用指南、项目默认并入首个配置页、配置页宽度自适应**：
+     - 现象/诉求：用户首次配置时把 "Format template:" / "Item line:" 标签和 `{text}` 一起粘进
+       Format template，生成结果出现字面量或为空；第二个 [项目设置 - 工具 - Commit Helper] 入口与
+       全局入口分离；设置页固定 880px，窗口变宽时右侧留白。
+     - 新手指南：设置新增第 5 个 tab「使用指南」，内容包括 3 步配置、三个动作说明、提示词/模板
+       占位符表、两个字段的正确值（`{items}` / `{text}`）、把标签或 `{text}` 粘进 Format template 的
+       反例、项目级/全局关系、`.gitmessage` 覆盖与排错清单；顶部实时显示配置自检结果，并提供
+       三个复制按钮（Format template、Item line、示例消息）。
+     - 首次引导：新增 app 级 `onboardingShown` 标记；首次点击提交面板动作时发一次通知，按钮
+       「打开指南」直接切到指南 tab；不阻断生成。
+     - 配置自检（只提示、不自动改）：`SettingsDiagnostics` 检查 6 类高信号问题——Format template
+       为空/缺 `{items}`、误填标签或 `{text}`、Item line 为空、Item line 以列表符号开头且不含
+       `{type}`、`useRepoCommitTemplate=true`、项目引用的 prompt/template id 失效、提示词缺
+       `{fileList}`/`{diff}`；同一问题组合每个 IDE 会话最多通知一次，可「本次不再提示」。通知只针对
+       ERROR 级（会破坏输出）问题，WARNING 级只在指南页显示。
+     - 项目默认并入：删除 `projectConfigurable` EP；第 4 个 tab 通过项目下拉框选择已打开项目
+       编辑其 `.idea/commit-helper.xml` 选择；无打开项目时显示提示并禁用；自动优先用当前活动项目
+       （ProjectUtil 反射 + 首个项目兜底），切换项目前有未保存修改会确认。
+     - 宽度自适应：`SettingsUi.page` 不再固定 880×640 的横向滚动策略，改为横向 NEVER + 纵向
+       AS_NEEDED；`column()` 改为实现 `Scrollable` 的宽度跟踪面板，内容随视口宽度拉伸；Commit
+       Content 的模板编辑/预览分栏最大高度放开，随窗口高度伸缩。
+     - 文档同步：`plugin.xml` 插件描述、Marketplace `description.html`、README、`change-notes.html`
+       增加初始化配置说明、正确模板值、排错步骤和 0.2.0 变更条目。
+     - 测试：`SettingsDiagnosticsTest`（7 条）+ `SettingsPagesTest` 扩展到 5 个 tab/5 个页面并新增
+       横向滚动条断言、指南 tab 选中断言；总计 **177 个测试全绿**（29 个测试类）。
+
 ### 真机确认（此前唯一挂着的"读不到面板"缺口）
 
 | 项 | 状态 |
@@ -462,7 +541,7 @@ com.caye.commithelper
 
 | 项 | 状态 |
 |---|---|
-| `./gradlew test`（79 个测试，含 21 个平台级测试） | ✅ 通过（0.1.2 新增 12 个回归测试；原有 67 个仍全绿） |
+| `./gradlew test`（177 个测试） | ✅ 通过（0.2.0 新增诊断自检、5 个设置页与横向滚动条回归测试） |
 | `./gradlew buildPlugin`（产出 zip） | ✅ 通过，`build/distributions/git-commit-helper-0.1.0.zip` |
 | `patchPluginXml` 产出合法 plugin.xml（since-build 241、action/EP 齐全） | ✅ 已解包核对 |
 | `./gradlew verifyPlugin`（241 / 243 / 262） | ✅ 三版本全部 `Compatible`，各 1 处 deprecated API；报告里**无结构性问题**（即 `add-to-group` 的 group-id 在三版本均可解析）。改名后又复跑一次，结论一致 |

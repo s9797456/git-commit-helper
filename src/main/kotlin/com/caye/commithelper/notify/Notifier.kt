@@ -1,5 +1,6 @@
 package com.caye.commithelper.notify
 
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -32,7 +33,7 @@ object Notifier {
         val group = NotificationGroupManager.getInstance().getNotificationGroup(GROUP_ID)
         val notification = group.createNotification(TITLE, content, type)
         if (retry != null) {
-            notification.addAction(object : AnAction("Retry") {
+            notification.addAction(object : AnAction(CommitHelperBundle.message("notification.retry")) {
                 override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
                 override fun actionPerformed(e: AnActionEvent) = retry()
             })

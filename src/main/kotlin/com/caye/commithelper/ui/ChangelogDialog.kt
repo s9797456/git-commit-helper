@@ -1,5 +1,6 @@
 package com.caye.commithelper.ui
 
+import com.caye.commithelper.i18n.CommitHelperBundle
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -30,16 +31,16 @@ class ChangelogDialog(
 ) : DialogWrapper(project) {
 
     init {
-        title = "Commit Helper — Commit Message / Changelog / PR Description"
+        title = CommitHelperBundle.message("dialog.changelog.title")
         isResizable = true
         init()
     }
 
     override fun createCenterPanel(): JComponent {
         val tabs = JTabbedPane()
-        tabs.addTab("Commit Message", tab(commitMessage))
-        tabs.addTab("Changelog", tab(changelog))
-        tabs.addTab("PR Description", tab(prDescription))
+        tabs.addTab(CommitHelperBundle.message("dialog.changelog.tabCommitMessage"), tab(commitMessage))
+        tabs.addTab(CommitHelperBundle.message("dialog.changelog.tabChangelog"), tab(changelog))
+        tabs.addTab(CommitHelperBundle.message("dialog.changelog.tabPrDescription"), tab(prDescription))
         tabs.preferredSize = Dimension(JBUI.scale(900), JBUI.scale(520))
         return tabs
     }
@@ -53,7 +54,7 @@ class ChangelogDialog(
             wrapStyleWord = true
             border = JBUI.Borders.empty(4)
         }
-        val copy = JButton(object : AbstractAction("Copy") {
+        val copy = JButton(object : AbstractAction(CommitHelperBundle.message("dialog.changelog.copy")) {
             override fun actionPerformed(e: ActionEvent) {
                 CopyPasteManager.getInstance().setContents(StringSelection(text))
             }
