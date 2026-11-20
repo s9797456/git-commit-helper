@@ -3,12 +3,22 @@ package com.caye.commithelper.settings
 import com.caye.commithelper.template.DefaultTemplates
 import java.util.UUID
 
+/** How the model answer is interpreted after the request. */
+enum class PromptOutputMode {
+    /** Strict JSON: subject + items + issue, rendered through the commit template. */
+    JSON,
+
+    /** Plain commit message: first line subject, feature-level body; the template is bypassed. */
+    FREE_TEXT,
+}
+
 /** A reusable, user-editable prompt. The built-in profile cannot be deleted. */
 data class PromptProfile(
     var id: String = "",
     var name: String = "",
     var prompt: String = "",
     var builtIn: Boolean = false,
+    var outputMode: PromptOutputMode = PromptOutputMode.JSON,
 )
 
 /** A reusable commit message layout (format + item line). The built-in template is read-only. */
@@ -35,10 +45,20 @@ fun newSettingsId(): String = UUID.randomUUID().toString()
 object BuiltIns {
 
     const val PROMPT_ID = "builtin-default"
+    const val DEVELOPER_SUMMARY_ID = "builtin-developer-summary"
     const val TEMPLATE_ID = "builtin-default"
 
     fun promptProfile(): PromptProfile =
         PromptProfile(id = PROMPT_ID, name = "Default", prompt = DefaultTemplates.PROMPT, builtIn = true)
+
+    fun developerSummaryProfile(): PromptProfile =
+        PromptProfile(
+            id = DEVELOPER_SUMMARY_ID,
+            name = "Developer Summary",
+            prompt = DefaultTemplates.DEVELOPER_SUMMARY,
+            builtIn = true,
+            outputMode = PromptOutputMode.FREE_TEXT,
+        )
 
     fun template(): CommitTemplate =
         CommitTemplate(

@@ -3,12 +3,15 @@ package com.caye.commithelper.service
 import com.caye.commithelper.adapter.CommitContext
 import com.caye.commithelper.adapter.NoOpTarget
 import com.caye.commithelper.i18n.CommitHelperBundle
+import com.caye.commithelper.settings.BuiltIns
 import com.caye.commithelper.settings.CommitHelperSettings
 import com.caye.commithelper.settings.CommitTemplate
 import com.caye.commithelper.settings.LanguageOption
 import com.caye.commithelper.settings.ProviderKind
 import com.caye.commithelper.settings.newSettingsId
 import com.caye.commithelper.template.DefaultTemplates
+import com.caye.commithelper.split.SplitPlanParser
+import com.caye.commithelper.template.FreeTextMessage
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.vcsUtil.VcsUtil
 import java.io.File
@@ -118,6 +121,59 @@ class LocalPipelineTest : BasePlatformTestCase() {
         }
     }
 
+    fun testDeveloperSummaryProfileFallsBackToFreeTextLocally() {
+        val path = VcsUtil.getFilePath(write("src/main/kotlin/demo/FreeText.kt", "class FreeText\n"))
+        val state = CommitHelperSettings.getInstance().state
+        val savedProfile = state.defaultPromptProfileId
+        val savedProvider = state.provider
+        val savedLanguage = state.language
+        val savedUseTemplate = state.useRepoCommitTemplate
+        try {
+            state.defaultPromptProfileId = BuiltIns.DEVELOPER_SUMMARY_ID
+            state.provider = ProviderKind.LOCAL_ONLY
+            state.language = LanguageOption.ENGLISH
+            state.useRepoCommitTemplate = false
+
+            val outcome = CommitHelperService(project)
+                .organize(CommitContext(project, NoOpTarget(), emptyList(), listOf(path)), null)
+
+            assertTrue("free-text fallback must still write text:\n" + outcome.text, outcome.text.isNotBlank())
+            assertTrue("subject must be conventional:\n" + outcome.text, outcome.text.startsWith("chore: "))
+            assertTrue(
+                "body must use feature bullets:\n" + outcome.text,
+                outcome.text.lines().any { it.startsWith("- ") },
+            )
+            assertTrue(
+                "local free-text fallback must satisfy the same contract",
+                FreeTextMessage.validate(outcome.text, listOf("chore", "feat", "refactor")).isEmpty(),
+            )
+        } finally {
+            state.defaultPromptProfileId = savedProfile
+            state.provider = savedProvider
+            state.language = savedLanguage
+            state.useRepoCommitTemplate = savedUseTemplate
+        }
+    }
+
+    fun testSplitFallbackWithoutProviderPartitionsCheckedFiles() {
+        val paths = listOf(
+            VcsUtil.getFilePath(write("src/main/kotlin/demo/Split.kt", "class Split\n")),
+            VcsUtil.getFilePath(write("docs/split.md", "# split\n")),
+        )
+        withSettings(provider = ProviderKind.LOCAL_ONLY, language = LanguageOption.ENGLISH) {
+            val plan = CommitHelperService(project).suggestSplit(
+                CommitContext(project, NoOpTarget(), emptyList(), paths),
+                null,
+            )
+            assertTrue("local provider must use the deterministic fallback", plan.usedFallback)
+            assertTrue("the fallback must still return groups", plan.groups.isNotEmpty())
+            assertTrue(
+                "the fallback must partition every checked path exactly once",
+                SplitPlanParser.validate(plan, plan.groups.flatMap { it.files }).isEmpty(),
+            )
+        }
+    }
+
     fun testEmptyChangeSetIsReportedInsteadOfWritingAnEmptyMessage() {
         withSettings(provider = ProviderKind.LOCAL_ONLY, language = LanguageOption.ENGLISH) {
             val outcome = CommitHelperService(project)
@@ -162,6 +218,7 @@ class LocalPipelineTest : BasePlatformTestCase() {
         val savedLanguage = state.language
         val savedUseTemplate = state.useRepoCommitTemplate
         val savedDefaultTemplateId = state.defaultTemplateId
+        val savedDefaultPromptId = state.defaultPromptProfileId
         val temporaryTemplate = if (formatTemplate == DefaultTemplates.FORMAT) {
             null
         } else {
@@ -179,11 +236,14 @@ class LocalPipelineTest : BasePlatformTestCase() {
             state.provider = provider
             state.language = language
             state.useRepoCommitTemplate = false
+            // These tests cover the JSON template pipeline; the new default profile is free text.
+            state.defaultPromptProfileId = BuiltIns.PROMPT_ID
             return block()
         } finally {
             state.provider = savedProvider
             state.language = savedLanguage
             state.useRepoCommitTemplate = savedUseTemplate
+            state.defaultPromptProfileId = savedDefaultPromptId
             if (temporaryTemplate != null) {
                 state.commitTemplates.remove(temporaryTemplate)
                 state.defaultTemplateId = savedDefaultTemplateId

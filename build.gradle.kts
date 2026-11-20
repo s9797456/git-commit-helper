@@ -101,7 +101,6 @@ intellijPlatform {
             // that element is what actually ends up in the shipped plugin.xml, this block is for
             // the Marketplace publication metadata.
             name = "me-tool"
-            email = "593259523@qq.com"
             url = providers.gradleProperty("pluginVendorUrl")
         }
 

@@ -218,6 +218,7 @@ per-line length limit (for example "within 20 characters"):
         filterResult: FilterResult,
         types: List<CommitType> = emptyList(),
         extraContext: String? = null,
+        freeText: Boolean = false,
     ): String {
         val typesText = typeListText(types)
         val extra = extraContext?.trim().orEmpty()
@@ -246,7 +247,7 @@ per-line length limit (for example "within 20 characters"):
         if (!promptTemplate.contains("{diff}")) {
             suffix.append("\n\nDiff:\n").append(filterResult.diffText.ifBlank { "(diff content disabled)" })
         }
-        if (!promptTemplate.contains(DETAIL_RULES_MARKER)) {
+        if (!freeText && !promptTemplate.contains(DETAIL_RULES_MARKER)) {
             suffix.append("\n\n").append(DETAIL_RULES)
         }
         return if (suffix.isEmpty()) rendered else rendered.trimEnd() + suffix + "\n"

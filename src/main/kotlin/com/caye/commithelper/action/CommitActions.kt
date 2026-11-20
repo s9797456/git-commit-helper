@@ -32,21 +32,24 @@ import java.io.File
 /** Writes the generated text into the commit message box, asking first when it is not empty. */
 object CommitMessageWriter {
 
+    /** Returns true only when text was written; a cancelled preview returns false. */
     fun write(
         project: Project,
         target: CommitMessageTarget,
         text: String,
         allowAppend: Boolean = true,
-    ) {
-        if (text.isBlank()) return
+    ): Boolean {
+        if (text.isBlank()) return false
         val current = target.getText()
         if (current.isBlank()) {
             target.setText(text)
-            return
+            return true
         }
         val dialog = PreviewDialog(project, current, text, allowAppend)
-        if (!dialog.showAndGet()) return
-        merge(current, text, dialog.choice)?.let { target.setText(it) }
+        if (!dialog.showAndGet()) return false
+        val merged = merge(current, text, dialog.choice) ?: return false
+        target.setText(merged)
+        return true
     }
 
     /**

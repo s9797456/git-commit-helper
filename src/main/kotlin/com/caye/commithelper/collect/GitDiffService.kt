@@ -154,7 +154,7 @@ class GitDiffService(private val project: Project) {
         for (file in unversioned) {
             val relative = file.toRelativePath()
             val content = if (includeDiff) readFileContent(file) else ""
-            val diffText = if (content.isNullOrEmpty()) "" else synthesizeNewFileDiff(content)
+            val diffText = if (content.isNullOrEmpty()) "" else synthesizeNewFileDiff(content, relative)
             val (added, removed) = DiffBlockParser.countLines(diffText)
             result.add(
                 FileChange(
@@ -203,11 +203,16 @@ class GitDiffService(private val project: Project) {
     }
 
     /** Caps synthesis at 400 lines: [com.caye.commithelper.filter.DiffFilter] truncates later. */
-    fun synthesizeNewFileDiff(content: String): String {
-        val lines = content.split('\n')
+    fun synthesizeNewFileDiff(content: String, path: String = "new"): String {
+        val allLines = content.split('\n')
+        val lines = if (allLines.isNotEmpty() && allLines.last().isEmpty()) allLines.dropLast(1) else allLines
         val shown = lines.take(MAX_SYNTHETIC_LINES)
+        val safePath = path.replace("\\", "/")
         return buildString {
-            append("--- /dev/null\n+++ b/new\n")
+            append("diff --git a/").append(safePath).append(" b/").append(safePath).append('\n')
+            append("new file mode 100644\n")
+            append("--- /dev/null\n+++ b/").append(safePath).append('\n')
+            append("@@ -0,0 +1,").append(shown.size).append(" @@\n")
             for (line in shown) append('+').append(line).append('\n')
             if (lines.size > shown.size) {
                 append("... [truncated ").append(lines.size - shown.size).append(" more lines]\n")

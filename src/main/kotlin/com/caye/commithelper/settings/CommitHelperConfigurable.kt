@@ -17,13 +17,14 @@ import javax.swing.JPanel
  * Settings | Tools | Commit Helper (application scope).
  *
  * The five pages are rendered as tabs inside this one settings entry. This is deliberate: the
- * platform wraps EP-based configurables in `ConfigurableWrapper`, which does NOT expose
- * [Configurable.Composite] children to the settings tree (only a raw programmatic configurable
+ * platform wraps EP-based configurables in ConfigurableWrapper, which does NOT expose
+ * Configurable.Composite children to the settings tree (only a raw programmatic configurable
  * would be expanded). The composite interface is still implemented so tools/tests can enumerate
- * the pages, but [createComponent] is what the settings dialog actually shows.
+ * the pages, but createComponent is what the settings dialog actually shows.
  *
- * The fourth tab edits the project-level defaults through a project picker instead of a separate
- * projectConfigurable entry; the fifth tab is the in-IDE onboarding guide.
+ * Pages are created lazily: opening Settings used to construct five full Swing trees and run the
+ * guide self-check before the user saw anything. Now only the selected tab is built, and each
+ * page is reset from the current state when it is first opened.
  */
 class CommitHelperConfigurable : Configurable, Configurable.Composite {
 
@@ -37,9 +38,12 @@ class CommitHelperConfigurable : Configurable, Configurable.Composite {
         guide,
     )
 
+    private val guideIndex: Int = pages.indexOf(guide)
+    private val pageComponents = arrayOfNulls<JComponent>(pages.size)
+
     private var root: JComponent? = null
     private var tabs: JBTabbedPane? = null
-    private var guideComponent: JComponent? = null
+    private var loadingComponent = false
 
     /** Brand name, intentionally not translated (SettingsUiTest asserts it in every locale). */
     override fun getDisplayName(): String = "Commit Helper"
@@ -52,47 +56,69 @@ class CommitHelperConfigurable : Configurable, Configurable.Composite {
             return it
         }
         val tabbed = JBTabbedPane()
-        var guideCreated: JComponent? = null
-        pages.forEach { page ->
-            val component = page.createComponent()
-            tabbed.addTab(page.displayName, component)
-            if (page === guide) guideCreated = component
-        }
+        pages.forEach { tabbed.addTab(it.displayName, JPanel()) }
         tabbed.addChangeListener {
-            if (tabbed.selectedComponent === guideCreated) guide.refresh()
+            if (loadingComponent) return@addChangeListener
+            val index = tabbed.selectedIndex
+            if (index >= 0) {
+                ensurePage(index)
+                if (index == guideIndex) guide.refresh()
+            }
         }
         val panel = JPanel(BorderLayout()).apply {
             border = JBUI.Borders.empty(6, 8, 8, 8)
             add(tabbed, BorderLayout.CENTER)
         }
         tabs = tabbed
-        guideComponent = guideCreated
         root = panel
         active = this
+        ensurePage(0)
         selectGuideIfRequested()
         return panel
     }
 
-    override fun isModified(): Boolean = pages.any { it.isModified() }
+    /** Builds one tab on first selection and restores its current state. */
+    private fun ensurePage(index: Int) {
+        if (index !in pages.indices || pageComponents[index] != null) return
+        val page = pages[index]
+        val component = page.createComponent()
+        if (page !== guide) page.reset()
+        pageComponents[index] = component
+        val tabbed = tabs ?: return
+        val selected = tabbed.selectedIndex
+        loadingComponent = true
+        try {
+            tabbed.setComponentAt(index, component)
+            tabbed.setTitleAt(index, page.displayName)
+            tabbed.selectedIndex = selected
+        } finally {
+            loadingComponent = false
+        }
+    }
+
+    override fun isModified(): Boolean =
+        pages.indices.any { pageComponents[it] != null && pages[it].isModified() }
 
     override fun apply() {
-        pages.forEach { it.apply() }
+        pages.indices.forEach { index ->
+            if (pageComponents[index] != null) pages[index].apply()
+        }
     }
 
     override fun reset() {
-        pages.forEach { it.reset() }
+        pages.indices.forEach { index ->
+            if (pageComponents[index] != null) pages[index].reset()
+        }
     }
 
     override fun disposeUIResources() {
-        if (root != null) {
-            pages.forEach { page ->
-                runCatching { page.disposeUIResources() }
-            }
+        pages.forEach { page ->
+            runCatching { page.disposeUIResources() }
         }
+        pageComponents.fill(null)
         tabs?.removeAll()
         tabs = null
         root = null
-        guideComponent = null
         if (active === this) active = null
     }
 
@@ -104,12 +130,9 @@ class CommitHelperConfigurable : Configurable, Configurable.Composite {
 
     private fun selectGuide() {
         val tabbed = tabs ?: return
-        val component = guideComponent ?: return
-        val index = tabbed.indexOfComponent(component)
-        if (index >= 0) {
-            tabbed.selectedIndex = index
-            guide.refresh()
-        }
+        ensurePage(guideIndex)
+        tabbed.selectedIndex = guideIndex
+        guide.refresh()
     }
 
     companion object {

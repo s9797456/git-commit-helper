@@ -260,7 +260,7 @@ com.caye.commithelper
 ## 10. 发布
 
 - 免费插件，**本地手动**发布（不在仓库存 Marketplace token）：`./gradlew signPlugin` → `./gradlew publishPlugin`。
-- vendor：`me-tool <593259523@qq.com>`（与 Marketplace vendor 档案一致；0.1.1 起生效）。
+- vendor：`me-tool`（与 Marketplace vendor 档案一致；0.1.1 起生效）。
   注意：**真正进包的是 `src/main/resources/META-INF/plugin.xml` 里的 `<vendor>`**，
   `build.gradle.kts` 的 `vendor {}` 不会覆盖它（0.1.0 打包实证），两处需同步维护。
 - plugin id `com.caye.commithelper`，name `Commit Helper`，license **Apache-2.0**。
@@ -365,7 +365,7 @@ com.caye.commithelper
       签名块（文件尾部可见 `PK\x05\x06` 之前有 `PK Sig Block 42` 标记）。0.1.1 实测：内层
       `lib/*.jar` 的 SHA-256 与未签名包**逐字节一致**（`c354e1d9…`），外层 zip 只多了约 2 KB。
       所以"看不到 META-INF 签名文件"≠"没签名"，判断依据应是 `verifyPluginSignature` 的结果。
-    - 密钥生成在工程外：`~/.commit-helper-signing/`（自签证书 `CN=sunpengfei`，2026-09-16 → 2036-09-13），
+    - 密钥生成在工程外：`~/.commit-helper-signing/`（自签证书 `CN=<vendor>`，2026-09-16 → 2036-09-13），
       `publish-env.sh` 为 600 权限，含三个环境变量的单行 base64；私钥不进工程、不进版本库。
     - 途中一次 `verifyPlugin` 因 `plugins.jetbrains.com` 连接超时失败（`ConnectException`），
       重跑即通过 —— 记为环境瞬时故障，不是代码问题。
@@ -396,13 +396,13 @@ com.caye.commithelper
       （`card` / `install`）不能放 README —— README 用 shields.io 徽章
       （`jetbrains/plugin/v|d/34303`，实测 200；评分端点目前取不到，暂不放），
       widget 另存到真实承载页 `marketplace/widget.html`（含两个 widget 与源码片段）。
-    - 曾发现一处不一致：包内 vendor 是 `sunpengfei / spf@caye.com`，Marketplace vendor 档案是
-      `me-tool / 593259523@qq.com`。用户决定统一，见下方第 19 条。
+    - 曾发现一处不一致：包内 vendor 是 the previous vendor，Marketplace vendor 档案是
+      `me-tool`。用户决定统一，见下方第 19 条。
 
-19. **vendor 身份统一（0.1.1）**：按用户决定，vendor 统一为 `me-tool <593259523@qq.com>`，
+19. **vendor 身份统一（0.1.1）**：按用户决定，vendor 统一为 `me-tool`，
     URL 用仓库地址。
     - **关键实证**：真正进包的是 `src/main/resources/META-INF/plugin.xml` 的 `<vendor>` 元素 ——
-      `build.gradle.kts` 里 `pluginConfiguration.vendor { }` 填了老值 `sunpengfei` 而 XML 里也写死老值，
+      `build.gradle.kts` 里 `pluginConfiguration.vendor { }` 填了老值 `local-user` 而 XML 里也写死老值，
       0.1.0 打出的 `build/tmp/patchPluginXml/plugin.xml` 与 zip 内 `META-INF/plugin.xml` 都仍是老的，
       说明该 DSL 块**不覆盖** XML 中的 `<vendor>`。因此两处都已同步修改，并在 `build.gradle.kts`
       留了注释说明这一关系（这是个容易踩的坑：只改 Gradle 配置不会生效）。
@@ -410,7 +410,7 @@ com.caye.commithelper
       `marketplace/change-notes.html` 顶部新增 0.1.1 小节。
     - 验证：`./gradlew test buildPlugin verifyPluginProjectConfiguration` = BUILD SUCCESSFUL；
       解开 `build/distributions/git-commit-helper-0.1.1.zip` 内 `META-INF/plugin.xml` 确认
-      `<version>0.1.1</version>` 与 `<vendor email="593259523@qq.com" …>me-tool</vendor>`，
+      `<version>0.1.1</version>` 与 `<vendor>me-tool</vendor>`，
       change notes 也已注入。
 
 20. **更新说明（change-notes）格式规范**：用户要求发版说明"明确、不可模糊、修复 bug 尽量带
@@ -429,7 +429,7 @@ com.caye.commithelper
 
 21. **0.1.2：多仓库 diff 为空、提交框高度/重影、摘要具体化（用户实机反馈的三个问题）**：
     - 根因①（问题 2/3，影响最大）：`GitDiffService` 把 **项目根**（`project.basePath`）相对路径
-      传给 `git diff`；但 `/Users/sunpengfei/code/v2` 这类多仓库工程的项目根没有 `.git`，每个仓库是子目录，
+      传给 `git diff`；但 `~/code/v2` 这类多仓库工程的项目根没有 `.git`，每个仓库是子目录，
       于是 `iot-platform-business-front-v2/src/...` 在仓库内匹配不到任何文件，diff 输出为空 →
       本地统计只有 `+0/-0`，模型只见文件名 → 摘要模糊/只剩"多少文件、多少行"。已用真实仓库复现：
       `git ls-files -- src/api/device-manage/deviceOta.ts` 命中，而带仓库名前缀的同一路径为空。
@@ -599,23 +599,3 @@ com.caye.commithelper
 ```
 IC-241.14494.240 against com.caye.commithelper:0.1.0: Compatible
 IC-243.21565.193 against com.caye.commithelper:0.1.0: Compatible. 1 usage of deprecated API
-IU-262.8665.258  against com.caye.commithelper:0.1.0: Compatible. 1 usage of deprecated API
-Dynamic Plugin Eligibility: Plugin can probably be enabled or disabled without IDE restart
-```
-
-那 1 处 deprecated 用法是 `com.intellij.credentialStore.CredentialAttributes` 的
-`requestor` 重载（`ApiKeyStore.attributes`）。`PasswordSafe` 只接受
-`CredentialAttributes`，没有非废弃的等价构造方式；Kotlin 的三参写法会被解析到
-`(String, String, Class)` 重载而编译失败，故保留并在此登记。
-
-## 12. 证据缺口 / 待补充（不阻塞实现）
-
-1. 被否决的第三方 Marketplace 插件具体名称与其具体痛点（用户只给了一般性理由）。
-2. Marketplace vendor 账号与签名证书尚未生成（发布前需要，用户提供）。
-3. Android Studio / PyCharm 只做 API 级兼容校验（Plugin Verifier），**没有**真机运行时冒烟证据。
-4. Anthropic 与 Gemini 的请求/响应格式以 2026-09 当时的公开 API 为准，未在真实账号上验证；实现时需把"响应解析"隔离在各自 client 内，便于后续修正。
-5. ~~第 16 条修复里的第 ②/③ 来源无法用无头测试覆盖~~ **已闭环**：测试态下平台装的是
-   `com.intellij.ide.impl.HeadlessDataManager`（不遍历组件树，已用 241 字节码确认），
-   所以这两条路径只能真机确认；用户已在自己的 IU-2026.2.1 上确认修复生效（见第 16 条）。
-   保留的兜底：若将来在别的 IDE 上仍读不到，`CommitContextAdapter` 会打一条 WARN
-   （含 data context 类名与各 key 的存在性），据此可一步定位。

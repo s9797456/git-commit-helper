@@ -13,6 +13,7 @@ import com.caye.commithelper.issue.IssueKeyExtractor
 import com.caye.commithelper.llm.LlmClient
 import com.caye.commithelper.llm.LlmProtocols
 import com.caye.commithelper.llm.LlmResponseParser
+import com.caye.commithelper.model.ChangeKind
 import com.caye.commithelper.model.ExtraContext
 import com.caye.commithelper.model.FilterResult
 import com.caye.commithelper.model.FileChange
@@ -22,10 +23,15 @@ import com.caye.commithelper.settings.ApiKeyStore
 import com.caye.commithelper.settings.CommitHelperSettings
 import com.caye.commithelper.settings.EffectiveSettings
 import com.caye.commithelper.settings.LanguageOption
+import com.caye.commithelper.settings.PromptOutputMode
 import com.caye.commithelper.settings.ProviderConfig
 import com.caye.commithelper.settings.ProviderKind
+import com.caye.commithelper.split.SplitPlan
+import com.caye.commithelper.split.SplitPlanParser
+import com.caye.commithelper.split.SplitPromptBuilder
 import com.caye.commithelper.template.DefaultTemplates
 import com.caye.commithelper.template.FormatPromptBuilder
+import com.caye.commithelper.template.FreeTextMessage
 import com.caye.commithelper.template.LanguageDetector
 import com.caye.commithelper.template.LocalFallbackBuilder
 import com.caye.commithelper.template.MessageRenderer
@@ -96,6 +102,7 @@ class CommitHelperService(private val project: Project) {
         val language = LanguageDetector.forOption(state.language, recentSubjects)
         val promptProfile = EffectiveSettings.promptProfile(project)
         val template = EffectiveSettings.template(project)
+        val freeText = promptProfile.outputMode == PromptOutputMode.FREE_TEXT
 
         val filterResult = DiffFilter.filter(
             files = files,
@@ -137,7 +144,11 @@ class CommitHelperService(private val project: Project) {
                 else -> CommitHelperBundle.message("error.noApiKey", provider.localizedName())
             }
             return GenerationOutcome(
-                text = render(localMessage),
+                text = if (freeText) {
+                    SkipCiApplier.apply(FreeTextMessage.local(files, language), extra?.skipCi)
+                } else {
+                    render(localMessage)
+                },
                 usedFallback = true,
                 errorMessage = reason,
                 providerLabel = provider.localizedName(),
@@ -167,14 +178,51 @@ class CommitHelperService(private val project: Project) {
                 filterResult = filterResult,
                 types = state.commitTypes,
                 extraContext = extra?.promptText(),
+                freeText = freeText,
             )
             val config = settings.configFor(provider)
             val client = LlmClient(protocol, config, apiKey)
             val raw = client.complete(prompt)
             log.info(
                 "Commit Helper: model response for " + provider.name + "/" + config.model +
-                    ": " + raw.length + " chars, prompt " + prompt.length + " chars",
+                    ": " + raw.length + " chars, prompt " + prompt.length + " chars, mode=" +
+                    (if (freeText) "FREE_TEXT" else "JSON"),
             )
+            if (freeText) {
+                val types = state.commitTypes.map { it.type }
+                var candidate = FreeTextMessage.normalize(raw)
+                var errors = FreeTextMessage.validate(candidate, types)
+                if (errors.isNotEmpty()) {
+                    log.warn("Commit Helper: free-text answer rejected: " + errors.joinToString("; "))
+                    val retry = client.complete(
+                        prompt + FreeTextMessage.RETRY_INSTRUCTION,
+                        maxTokens = (config.maxTokens * 2).coerceAtMost(8192),
+                    )
+                    candidate = FreeTextMessage.normalize(retry)
+                    errors = FreeTextMessage.validate(candidate, types)
+                }
+                if (errors.isNotEmpty()) {
+                    return freeTextFallback(
+                        files = files,
+                        language = language,
+                        extra = extra,
+                        errorMessage = CommitHelperBundle.message(
+                            "error.invalidFreeText",
+                            errors.joinToString("; "),
+                        ),
+                        provider = provider,
+                        warning = missingDiffWarning,
+                    )
+                }
+                return GenerationOutcome(
+                    text = SkipCiApplier.apply(candidate.trimEnd() + "\n", extra?.skipCi),
+                    usedFallback = false,
+                    providerLabel = provider.localizedName(),
+                    includedFiles = files.size,
+                    sampled = filterResult.sampled,
+                    warning = missingDiffWarning,
+                )
+            }
             val parsed = usable(LlmResponseParser.parse(raw)) ?: usable(retryWithCompactPrompt(client, prompt, config))
                 ?: throw IllegalStateException(CommitHelperBundle.message("error.invalidJson"))
             val finalMessage = parsed.copy(issue = parsed.issue ?: issue)
@@ -210,7 +258,11 @@ class CommitHelperService(private val project: Project) {
         } catch (e: Exception) {
             log.warn("Commit Helper: generation failed: " + e.javaClass.simpleName + ": " + e.message)
             GenerationOutcome(
-                text = render(localMessage),
+                text = if (freeText) {
+                    SkipCiApplier.apply(FreeTextMessage.local(files, language), extra?.skipCi)
+                } else {
+                    render(localMessage)
+                },
                 usedFallback = true,
                 errorMessage = e.message ?: e.javaClass.simpleName,
                 providerLabel = provider.localizedName(),
@@ -220,6 +272,107 @@ class CommitHelperService(private val project: Project) {
                 warning = missingDiffWarning,
             )
         }
+    }
+
+    /**
+     * LLM-only: propose an atomic-commit split plan. The model only partitions the checked
+     * files; the plugin validates the partition and falls back to deterministic grouping when
+     * the answer is incomplete or unavailable. It never stages or commits anything.
+     */
+    fun suggestSplit(context: CommitContext, indicator: ProgressIndicator?): SplitPlan {
+        val state = settings.state
+        indicator?.text = CommitHelperBundle.message("progress.collectingChanges")
+        val files = GitDiffService(project).collect(
+            changes = context.includedChanges,
+            unversioned = context.unversionedFiles(),
+            includeDiff = state.includeDiff,
+        )
+        if (files.isEmpty()) {
+            return SplitPlanParser.fallback(files, OutputLanguage.CHINESE)
+        }
+        val root = repoRoot(context, files)
+        val gitOps = GitOps.forPath(project, root)
+        val language = LanguageDetector.forOption(state.language, gitOps?.recentSubjects(20).orEmpty())
+        val filterResult = DiffFilter.filter(
+            files = files,
+            maxLinesPerFile = state.maxLinesPerFile,
+            maxTotalChars = state.maxTotalChars,
+            extraExcludes = state.extraExcludes,
+        )
+        val provider = state.provider
+        val protocol = LlmProtocols.of(provider)
+        val apiKey = ApiKeyStore.get(provider)
+        if (protocol == null || apiKey.isNullOrBlank()) {
+            return attachDiffs(
+                SplitPlanParser.fallback(files, language).copy(
+                    errorMessage = if (protocol == null) null else {
+                        CommitHelperBundle.message("error.splitNeedsProvider", provider.localizedName())
+                    },
+                ),
+                files,
+            )
+        }
+        if (!confirmSending(state, files, filterResult)) {
+            return SplitPlan(emptyList(), usedFallback = true, errorMessage = null)
+        }
+        indicator?.text = CommitHelperBundle.message("progress.suggestingSplit")
+        val promptProfile = EffectiveSettings.promptProfile(project)
+        val template = EffectiveSettings.template(project)
+        val prompt = SplitPromptBuilder.build(
+            language = language.promptName,
+            files = files.map { it.path },
+            diffText = filterResult.diffText.ifBlank { "(diff content disabled)" },
+            types = state.commitTypes,
+            guidance = promptProfile.prompt,
+            formatTemplate = template.format,
+        )
+        val config = settings.configFor(provider)
+        val client = LlmClient(protocol, config, apiKey)
+        return try {
+            val raw = client.complete(prompt)
+            log.info("Commit Helper: split response " + raw.length + " chars, prompt " + prompt.length + " chars")
+            var plan = SplitPlanParser.parse(raw)
+            var errors = plan?.let { SplitPlanParser.validate(it, files.map { file -> file.path }) }.orEmpty()
+            if (plan == null || errors.isNotEmpty()) {
+                val retryPrompt = prompt + """
+
+Return STRICTLY valid JSON only. Every exact checked path must appear in exactly one group.
+Do not invent paths. Use 1-6 groups; each group needs subject, body and files.
+"""
+                val retry = client.complete(retryPrompt, maxTokens = (config.maxTokens * 2).coerceAtMost(8192))
+                plan = SplitPlanParser.parse(retry)
+                errors = plan?.let { SplitPlanParser.validate(it, files.map { file -> file.path }) }.orEmpty()
+            }
+            if (plan == null || errors.isNotEmpty()) {
+                log.warn("Commit Helper: split plan rejected: " + errors.joinToString("; "))
+                attachDiffs(
+                    SplitPlanParser.fallback(files, language).copy(
+                        errorMessage = CommitHelperBundle.message("error.splitInvalidPlan", errors.joinToString("; ")),
+                    ),
+                    files,
+                )
+            } else {
+                attachDiffs(plan, files)
+            }
+        } catch (e: Exception) {
+            log.warn("Commit Helper: split generation failed: " + e.javaClass.simpleName + ": " + e.message)
+            attachDiffs(SplitPlanParser.fallback(files, language).copy(errorMessage = e.message ?: e.javaClass.simpleName), files)
+        }
+    }
+
+    /** Attaches per-file unified diffs for the double-click preview. */
+    private fun attachDiffs(plan: SplitPlan, files: List<FileChange>): SplitPlan {
+        val byPath = files.associateBy { it.path }
+        return plan.copy(
+            groups = plan.groups.map { group ->
+                val paths = group.files.ifEmpty { group.effectiveFiles() }
+                group.copy(
+                    files = paths,
+                    diffs = paths.associateWith { byPath[it]?.diffText.orEmpty() },
+                    fileKinds = paths.associateWith { byPath[it]?.kind ?: ChangeKind.UNKNOWN },
+                )
+            },
+        )
     }
 
     /**
@@ -265,7 +418,7 @@ class CommitHelperService(private val project: Project) {
             formatTemplate = template.format,
             types = state.commitTypes,
             currentMessage = current,
-            guidance = promptProfile.prompt,
+            guidance = if (promptProfile.outputMode == PromptOutputMode.FREE_TEXT) "" else promptProfile.prompt,
         )
         indicator?.text = CommitHelperBundle.message("progress.reformattingMessage")
         return try {
@@ -332,6 +485,28 @@ If there is a subject but no usable item, put the concrete change in one item in
     /** A model answer without items cannot render an items-only template: retry instead. */
     private fun usable(message: GeneratedMessage?): GeneratedMessage? =
         message?.takeIf { it.items.isNotEmpty() }
+
+    /** Local fallback for the free-text profile; never returns blank text. */
+    private fun freeTextFallback(
+        files: List<FileChange>,
+        language: OutputLanguage,
+        extra: ExtraContext?,
+        errorMessage: String,
+        provider: ProviderKind,
+        warning: String?,
+    ): GenerationOutcome {
+        val text = SkipCiApplier.apply(FreeTextMessage.local(files, language), extra?.skipCi)
+            .ifBlank { CommitHelperBundle.message("error.emptyModelMessage") }
+        return GenerationOutcome(
+            text = text,
+            usedFallback = true,
+            errorMessage = errorMessage,
+            providerLabel = provider.localizedName(),
+            includedFiles = files.size,
+            sampled = false,
+            warning = warning,
+        )
+    }
 
     /** Writes the local grouping when the model answer cannot produce visible text. */
     private fun fallbackOutcome(

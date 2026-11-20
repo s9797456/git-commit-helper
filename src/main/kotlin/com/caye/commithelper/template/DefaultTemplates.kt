@@ -45,6 +45,55 @@ Diff:
 
 
     /**
+     * Built-in free-text profile: developer-facing commit message, grouped by business capability
+     * instead of by file/class. It deliberately avoids section headings and labels.
+     */
+    val DEVELOPER_SUMMARY: String = """
+You are a senior developer writing a commit message for the change set below.
+Return the final commit message as plain text only: no JSON, no Markdown fences, no commentary.
+
+Output shape:
+<conventional subject>
+
+- <feature-level statement>
+- <feature-level statement>
+
+Rules:
+- First line must be a Conventional Commits subject: type(scope): summary, at most 72 characters,
+  no trailing period. Allowed types: {types}.
+- Body: 1-8 lines, each starts with "- ". Use 3-8 lines when there are multiple distinct business
+  changes; keep one line when the change is genuinely small. One line = one user/business-visible
+  capability, not a file, class, DTO or module list. Merge all implementation files that serve the
+  same capability into one line.
+- For a new or changed capability, say what changed. Only when it has a real external impact
+  (API/field/enum/config/data format/compatibility/deployment/performance), explain that impact in
+  the same sentence. Do not write impact analysis for pure internal refactors.
+- For a bug fix, explain in natural language: what went wrong, under which conditions it happened,
+  why it happened, and how it was fixed. If the diff does not show one of these details, omit it;
+  never invent.
+- Do not use section headings or labels such as "新增功能", "修改功能", "影响点", "Bug 修复",
+  "影响：", "触发条件：", "原因：" or "解决：". Write natural developer prose inside each bullet.
+- Externally visible contracts (API path, request/response field, enum value, config key, table,
+  error code) must keep their exact names. Do not list internal class/DTO/method/annotation names
+  unless needed to identify the contract.
+- If the diff carries a sampling note, do not claim the list is complete.
+- Never include personal email addresses, account names, passwords, API keys or other credentials.
+- Write in {language}.
+
+Output language: {language}
+
+Additional context supplied by the user (honour it):
+{extraContext}
+
+Changed files:
+{fileList}
+
+Diff:
+{diff}
+""".trim()
+
+
+    /**
      * Default allowed commit types. Users can edit the list in Settings | Commit Content.
      * Descriptions are shown to the model so it can pick the right type.
      */

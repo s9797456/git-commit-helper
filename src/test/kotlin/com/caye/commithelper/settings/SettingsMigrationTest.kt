@@ -30,12 +30,15 @@ class SettingsMigrationTest {
     fun `a fresh install exposes exactly the protected built-ins`() {
         val state = load()
 
-        assertEquals(1, state.promptProfiles.size, "a new install starts with only the built-in prompt")
-        val builtInPrompt = state.promptProfiles.single()
+        assertEquals(2, state.promptProfiles.size, "a new install starts with the JSON and developer profiles")
+        val builtInPrompt = state.promptProfiles.first { it.id == BuiltIns.PROMPT_ID }
         assertEquals(BuiltIns.PROMPT_ID, builtInPrompt.id)
         assertTrue(builtInPrompt.builtIn)
         assertEquals(DefaultTemplates.PROMPT, builtInPrompt.prompt)
-        assertEquals(BuiltIns.PROMPT_ID, state.defaultPromptProfileId)
+        val developer = state.promptProfiles.first { it.id == BuiltIns.DEVELOPER_SUMMARY_ID }
+        assertTrue(developer.builtIn)
+        assertEquals(PromptOutputMode.FREE_TEXT, developer.outputMode)
+        assertEquals(BuiltIns.DEVELOPER_SUMMARY_ID, state.defaultPromptProfileId)
 
         assertEquals(1, state.commitTemplates.size, "a new install starts with only the built-in template")
         val builtInTemplate = state.commitTemplates.single()
@@ -90,8 +93,8 @@ class SettingsMigrationTest {
         val state = load { promptTemplate = DefaultTemplates.PROMPT }
 
         assertTrue(state.customProfiles().isEmpty(), "the shipped default must not be duplicated as My prompt")
-        assertEquals(1, state.promptProfiles.size)
-        assertEquals(BuiltIns.PROMPT_ID, state.defaultPromptProfileId)
+        assertEquals(2, state.promptProfiles.size)
+        assertEquals(BuiltIns.DEVELOPER_SUMMARY_ID, state.defaultPromptProfileId)
     }
 
     @Test
@@ -99,7 +102,7 @@ class SettingsMigrationTest {
         val state = load { promptTemplate = "   \n\t" }
 
         assertTrue(state.customProfiles().isEmpty())
-        assertEquals(BuiltIns.PROMPT_ID, state.defaultPromptProfileId)
+        assertEquals(BuiltIns.DEVELOPER_SUMMARY_ID, state.defaultPromptProfileId)
     }
 
     @Test
@@ -151,7 +154,7 @@ class SettingsMigrationTest {
         settings.loadState(legacy)
         settings.loadState(legacy)
         val after = settings.state
-        assertEquals(2, after.promptProfiles.size, "one built-in plus one migrated profile")
+        assertEquals(3, after.promptProfiles.size, "two built-ins plus one migrated profile")
         assertEquals(2, after.commitTemplates.size, "one built-in plus one migrated template")
         assertEquals(1, after.customProfiles().size)
         assertEquals(1, after.customTemplates().size)
@@ -160,7 +163,7 @@ class SettingsMigrationTest {
         // A separate instance loading the same already-migrated state must not migrate again either.
         val second = CommitHelperSettings()
         second.loadState(legacy)
-        assertEquals(2, second.state.promptProfiles.size)
+        assertEquals(3, second.state.promptProfiles.size)
         assertEquals(2, second.state.commitTemplates.size)
     }
 
@@ -180,7 +183,7 @@ class SettingsMigrationTest {
         assertTrue(state.commitTemplates.any { it.id == BuiltIns.TEMPLATE_ID && it.builtIn })
         assertTrue(state.commitTypes.any { it.type == "feat" })
         assertTrue(state.skipCiPresets.contains("[skip ci]"))
-        assertEquals(BuiltIns.PROMPT_ID, state.defaultPromptProfileId, "a dangling default must be repaired")
+        assertEquals(BuiltIns.DEVELOPER_SUMMARY_ID, state.defaultPromptProfileId, "a dangling default must be repaired")
         assertEquals(BuiltIns.TEMPLATE_ID, state.defaultTemplateId, "a dangling default must be repaired")
     }
 
@@ -193,7 +196,8 @@ class SettingsMigrationTest {
         }
 
         assertEquals(BuiltIns.PROMPT_ID, state.promptProfiles.first().id, "the built-in stays first in the list")
-        assertEquals("custom-a", state.promptProfiles[1].id)
+        assertEquals(BuiltIns.DEVELOPER_SUMMARY_ID, state.promptProfiles[1].id)
+        assertEquals("custom-a", state.promptProfiles[2].id)
     }
 
     @Test
@@ -212,7 +216,7 @@ class SettingsMigrationTest {
         assertEquals("{subject}\n{items}", state.commitTemplates.first { it.id == "custom-t" }.format)
         assertEquals("custom-a", state.defaultPromptProfileId)
         assertEquals("custom-t", state.defaultTemplateId)
-        assertEquals(2, state.promptProfiles.size)
+        assertEquals(3, state.promptProfiles.size)
         assertEquals(2, state.commitTemplates.size)
     }
 

@@ -3,13 +3,15 @@
 工程侧能自动化的部分已经全部就绪；本文件只列"你要做的一次性动作"和"每次发版的动作"。
 顺序执行即可，每步都给了可验证的输出。
 
+> **发布前强制检查**：`python3 scripts/check-release-notes.py`。该脚本会扫描 `marketplace/`、README、PUBLISHING、SPEC、plugin.xml 和 build.gradle.kts，发现个人邮箱、账号、密码或 token 值时直接失败。
+
 ## 0. 现状
 
 | 项 | 状态 |
 |---|---|
 | plugin id / name / version | `com.caye.commithelper` / `Commit Helper` / `0.1.0`（已提交，审核中）+ 本地已备 **`0.1.1`**（vendor 统一，见 §8） |
 | since-build | `241`（2024.1+），无 until-build |
-| vendor | `me-tool <593259523@qq.com>`（与 Marketplace vendor 档案一致；0.1.1 起生效） |
+| vendor | `me-tool`（与 Marketplace vendor 档案一致；0.1.1 起生效） |
 | 展示内容 | `marketplace/description.html`、`marketplace/change-notes.html`，构建时写入 plugin.xml |
 | 本地验收 | `./gradlew clean test buildPlugin verifyPlugin verifyPluginProjectConfiguration` 全绿；67 测试；241/243/262 三版本 verifier `Compatible` |
 | 签名 | ✅ 密钥已生成、`signPlugin` + `verifyPluginSignature` 实跑通过（见 §2） |
@@ -17,14 +19,14 @@
 | 已上架 | 条目 id `34303`（`/plugin/34303-commit-helper`）；**0.1.0 审核中**，尚不可安装 |
 | 产物 | `build/distributions/git-commit-helper-0.1.0*.zip`（已提交）与 `…-0.1.1*.zip`（待发），约 176 KB，上限 400 MB |
 
-> 沙箱里跑 Gradle 需要 `GRADLE_USER_HOME=/Users/sunpengfei/code/deepseek/.gradle-home`；
+> 沙箱里跑 Gradle 需要 `GRADLE_USER_HOME=<workspace>/.gradle-home`；
 > 你自己终端里不需要。
 
 ## 1. 发布前必须做的（工程侧已全部就绪）
 
 1. ~~`gradle.properties` 的 `pluginVendorUrl`~~ ✅ 已填 `https://github.com/s9797456/git-commit-helper`。
 2. ~~公开源码（Apache-2.0 上架必需）~~ ✅ 已推送到该公开仓库，见 §6。
-3. **网页表单要填**：Vendor profile（名称/邮箱/网址）、License（Apache-2.0 + 上面源码链接）、
+3. **网页表单要填**：Vendor profile（名称/网址）、License（Apache-2.0 + 上面源码链接）、
    Tags（建议 `VCS`/`Git`/`AI`/`Productivity`）、截图（可选但建议）。
 
 ## 2. 签名密钥（已完成，勿重复生成）
@@ -35,13 +37,13 @@
 |---|---|
 | `private.pem`（600） | 签名私钥（`signPlugin` 用） |
 | `private_encrypted.pem`（600） | 加密留档版，**建议备份到密码管理器/离线介质** |
-| `chain.crt` | 自签证书，`CN=sunpengfei`，有效期 2026-09-16 → 2036-09-13 |
+| `chain.crt` | 自签证书，`CN=<vendor>`，有效期 2026-09-16 → 2036-09-13 |
 | `publish-env.sh`（600） | 已含 `CERTIFICATE_CHAIN` / `PRIVATE_KEY` / `PRIVATE_KEY_PASSWORD` 的单行 base64 export；密码也在里面 |
 
 已验证可用（会产出 `build/distributions/git-commit-helper-0.1.0-signed.zip` 并校验通过）：
 
 ```bash
-cd /Users/sunpengfei/code/deepseek/git-commit-helper
+cd $PROJECT_DIR
 source ~/.commit-helper-signing/publish-env.sh
 ./gradlew signPlugin verifyPluginSignature
 ```
@@ -54,9 +56,7 @@ source ~/.commit-helper-signing/publish-env.sh
 
 <https://plugins.jetbrains.com/author/me/tokens> → `Generate Token` → **只显示一次**，立刻存下：
 
-```bash
-echo "export PUBLISH_TOKEN='perm:...'" >> ~/.commit-helper-signing/publish-env.sh
-```
+将 token 写入 `~/.commit-helper-signing/publish-env.sh`；该文件不要提交、不要把值贴进文档。
 
 ## 4. 首次发布：必须网页手动上传（✅ 已完成）
 
@@ -79,7 +79,7 @@ echo "export PUBLISH_TOKEN='perm:...'" >> ~/.commit-helper-signing/publish-env.s
 # 1) 改 gradle.properties 的 pluginVersion（Marketplace 不收同版本号的重复上传）
 # 2) 更新 marketplace/change-notes.html —— 格式见下方《更新说明规范》
 # 3) 本地验收 + 发布
-cd /Users/sunpengfei/code/deepseek/git-commit-helper
+cd $PROJECT_DIR
 ./gradlew clean test buildPlugin verifyPluginProjectConfiguration
 source ~/.commit-helper-signing/publish-env.sh
 ./gradlew publishPlugin
@@ -124,7 +124,7 @@ intellijPlatform { publishing { channels = listOf("beta") } }
 75s 超时，重试即可；`api.github.com` 是稳定的）：
 
 ```bash
-cd /Users/sunpengfei/code/deepseek/git-commit-helper
+cd $PROJECT_DIR
 for i in $(seq 1 10); do
   git push && break
   echo "第 $i 次失败，重试…"; sleep 3
@@ -162,7 +162,7 @@ Marketplace 上传表单里的 **Source code** 字段填上面那个仓库地址
 | 名称 | Commit Helper |
 | vendor | 组织 `me-tool`（<https://plugins.jetbrains.com/vendor/me-tool>） |
 
-vendor 身份已统一为 **`me-tool / 593259523@qq.com`**（URL 用仓库地址），0.1.1 起生效。
+vendor 身份已统一为 **`me-tool`**（URL 用仓库地址），0.1.1 起生效。
 
 > 改的时候注意：真正进包的是 `src/main/resources/META-INF/plugin.xml` 里的 `<vendor>`，
 > `build.gradle.kts` 的 `pluginConfiguration.vendor { }` **不会覆盖它**（0.1.0 打包实证：
@@ -234,4 +234,3 @@ scripts/listing-status.sh
 想发布成网页的话，最简单是开 GitHub Pages：仓库 **Settings → Pages → Deploy from a branch**，
 选 `main` + `/ (root)`，之后就能访问
 `https://s9797456.github.io/git-commit-helper/marketplace/widget.html`；把这段嵌到公司官网/博客同理。
-

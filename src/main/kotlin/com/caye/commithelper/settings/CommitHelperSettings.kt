@@ -69,7 +69,7 @@ class CommitHelperSettings : PersistentStateComponent<CommitHelperSettings.State
         var commitTemplates: MutableList<CommitTemplate> = mutableListOf()
         var commitTypes: MutableList<CommitType> = mutableListOf()
 
-        var defaultPromptProfileId: String = BuiltIns.PROMPT_ID
+        var defaultPromptProfileId: String = BuiltIns.DEVELOPER_SUMMARY_ID
         var defaultTemplateId: String = BuiltIns.TEMPLATE_ID
 
         // --- actions / skip CI ---
@@ -124,12 +124,19 @@ class CommitHelperSettings : PersistentStateComponent<CommitHelperSettings.State
     /** Restores the shipped prompt/template content. Custom entries are kept. */
     fun resetTemplates() {
         val current = state
-        current.promptProfiles.firstOrNull { it.builtIn }?.let { it.prompt = DefaultTemplates.PROMPT }
-        current.commitTemplates.firstOrNull { it.builtIn }?.let {
+        current.promptProfiles.firstOrNull { it.id == BuiltIns.PROMPT_ID }?.let {
+            it.prompt = DefaultTemplates.PROMPT
+            it.outputMode = PromptOutputMode.JSON
+        }
+        current.promptProfiles.firstOrNull { it.id == BuiltIns.DEVELOPER_SUMMARY_ID }?.let {
+            it.prompt = DefaultTemplates.DEVELOPER_SUMMARY
+            it.outputMode = PromptOutputMode.FREE_TEXT
+        }
+        current.commitTemplates.firstOrNull { it.id == BuiltIns.TEMPLATE_ID }?.let {
             it.format = DefaultTemplates.FORMAT
             it.itemLine = DefaultTemplates.ITEM_LINE
         }
-        current.defaultPromptProfileId = BuiltIns.PROMPT_ID
+        current.defaultPromptProfileId = BuiltIns.DEVELOPER_SUMMARY_ID
         current.defaultTemplateId = BuiltIns.TEMPLATE_ID
     }
 
@@ -177,6 +184,9 @@ class CommitHelperSettings : PersistentStateComponent<CommitHelperSettings.State
         if (state.promptProfiles.none { it.id == BuiltIns.PROMPT_ID }) {
             state.promptProfiles.add(0, BuiltIns.promptProfile())
         }
+        if (state.promptProfiles.none { it.id == BuiltIns.DEVELOPER_SUMMARY_ID }) {
+            state.promptProfiles.add(1.coerceAtMost(state.promptProfiles.size), BuiltIns.developerSummaryProfile())
+        }
         if (state.commitTemplates.none { it.id == BuiltIns.TEMPLATE_ID }) {
             state.commitTemplates.add(0, BuiltIns.template())
         }
@@ -187,10 +197,22 @@ class CommitHelperSettings : PersistentStateComponent<CommitHelperSettings.State
             state.skipCiPresets.addAll(BuiltIns.skipCiPresets())
         }
         if (state.promptProfiles.none { it.id == state.defaultPromptProfileId }) {
-            state.defaultPromptProfileId = BuiltIns.PROMPT_ID
+            state.defaultPromptProfileId = BuiltIns.DEVELOPER_SUMMARY_ID
         }
         if (state.commitTemplates.none { it.id == state.defaultTemplateId }) {
             state.defaultTemplateId = BuiltIns.TEMPLATE_ID
+        }
+        state.promptProfiles.firstOrNull { it.id == BuiltIns.PROMPT_ID }?.let { profile ->
+            // A historical edit replaced the shipped JSON contract with a sectioned-text prompt;
+            // the built-in is protected, so repair it instead of leaving a profile the parser
+            // cannot consume.
+            if (profile.prompt.contains("sectioned text only")) {
+                profile.prompt = DefaultTemplates.PROMPT
+                profile.outputMode = PromptOutputMode.JSON
+            }
+        }
+        state.promptProfiles.firstOrNull { it.id == BuiltIns.DEVELOPER_SUMMARY_ID }?.let {
+            it.outputMode = PromptOutputMode.FREE_TEXT
         }
     }
 

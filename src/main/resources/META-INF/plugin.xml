@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.caye.commithelper</id>
     <name>Commit Helper</name>
-    <vendor email="593259523@qq.com" url="https://github.com/s9797456/git-commit-helper">me-tool</vendor>
+    <vendor url="https://github.com/s9797456/git-commit-helper">me-tool</vendor>
 
     <description><![CDATA[
     Organizes the changes you have checked in the commit panel into a ready-to-commit message:
@@ -55,7 +55,10 @@
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
                           relative-to-action="com.caye.commithelper.GenerateWithContext"/>
         </action>
-        <action id="com.caye.commithelper.GenerateChangelog"
+        <action id="com.caye.commithelper.SuggestCommitSplit" class="com.caye.commithelper.action.SuggestCommitSplitAction" icon="AllIcons.Actions.SplitVertically" text="Suggest Commit Split" description="Suggest atomic commit groups; commit one group with an editable message and optionally push">
+      <add-to-group group-id="Vcs.MessageActionGroup" anchor="after" relative-to-action="com.caye.commithelper.FormatCommitMessage" />
+    </action>
+    <action id="com.caye.commithelper.GenerateChangelog"
                 class="com.caye.commithelper.action.GenerateChangelogAction"
                 icon="AllIcons.Actions.ShowAsTree"
                 text="Generate Changelog / PR Description"
