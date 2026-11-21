@@ -66,6 +66,9 @@ jobs:
           if-no-files-found: warn
 
   vscode:
+    permissions:
+      contents: read
+      id-token: write
     if: ${{ inputs.target != 'intellij' }}
     runs-on: ubuntu-latest
     defaults:
@@ -77,7 +80,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install, test, package
         run: |
@@ -85,16 +88,10 @@ jobs:
           npm test
           npm run package
 
-      - name: Publish to VS Code Marketplace
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to VS Code Marketplace (Trusted Publishing)
         run: |
-          if [ -z "$VSCE_PAT" ]; then
-            echo "VSCE_PAT is not configured; skipping VS Code Marketplace publication."
-            exit 0
-          fi
           VSIX=$(ls dist/commit-helper-*.vsix | head -n 1)
-          npx --yes @vscode/vsce@latest publish --packagePath "$VSIX" -p "$VSCE_PAT"
+          npx --yes @vscode/vsce@latest publish --packagePath "$VSIX" --oidc
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
