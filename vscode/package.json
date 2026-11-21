@@ -1,0 +1,234 @@
+{
+  "name": "commit-helper",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "0.1.0",
+  "publisher": "me-tool",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/s9797456/git-commit-helper"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "commit",
+    "commit message",
+    "ai",
+    "llm",
+    "scm"
+  ],
+  "activationEvents": [
+    "onCommand:commitHelper.generate",
+    "onCommand:commitHelper.generateWithContext",
+    "onCommand:commitHelper.format",
+    "onCommand:commitHelper.setApiKey",
+    "onCommand:commitHelper.testConnection",
+    "onCommand:commitHelper.openSettings",
+    "onCommand:commitHelper.showOutput"
+  ],
+  "main": "./extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check extension.js && node --check src/core.js",
+    "package": "node scripts/package-vsix.js"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "commitHelper.generate",
+        "title": "%command.generate%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.generateWithContext",
+        "title": "%command.generateWithContext%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.format",
+        "title": "%command.format%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.setApiKey",
+        "title": "%command.setApiKey%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.testConnection",
+        "title": "%command.testConnection%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.openSettings",
+        "title": "%command.openSettings%",
+        "category": "%category%"
+      },
+      {
+        "command": "commitHelper.showOutput",
+        "title": "%command.showOutput%",
+        "category": "%category%"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "commitHelper.generate",
+          "group": "navigation@1",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "commitHelper.generateWithContext",
+          "group": "navigation@2",
+          "when": "scmProvider == git"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "%config.title%",
+      "properties": {
+        "commitHelper.provider": {
+          "type": "string",
+          "enum": [
+            "openai-compatible",
+            "anthropic",
+            "gemini",
+            "local"
+          ],
+          "enumDescriptions": [
+            "%config.provider.openai%",
+            "%config.provider.anthropic%",
+            "%config.provider.gemini%",
+            "%config.provider.local%"
+          ],
+          "default": "openai-compatible",
+          "description": "%config.provider.desc%"
+        },
+        "commitHelper.baseUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "%config.baseUrl.desc%"
+        },
+        "commitHelper.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "%config.model.desc%"
+        },
+        "commitHelper.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "zh",
+            "en",
+            "ja",
+            "ko"
+          ],
+          "default": "auto",
+          "enumDescriptions": [
+            "%config.language.auto%",
+            "Chinese",
+            "English",
+            "Japanese",
+            "Korean"
+          ],
+          "description": "%config.language.desc%"
+        },
+        "commitHelper.scope": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "staged",
+            "all"
+          ],
+          "default": "auto",
+          "enumDescriptions": [
+            "%config.scope.auto%",
+            "%config.scope.staged%",
+            "%config.scope.all%"
+          ],
+          "description": "%config.scope.desc%"
+        },
+        "commitHelper.confirmBeforeSending": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.confirm.desc%"
+        },
+        "commitHelper.includeDiff": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.includeDiff.desc%"
+        },
+        "commitHelper.maxDiffChars": {
+          "type": "number",
+          "default": 60000,
+          "minimum": 1000,
+          "description": "%config.maxDiffChars.desc%"
+        },
+        "commitHelper.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "minimum": 128,
+          "maximum": 32768,
+          "description": "%config.maxTokens.desc%"
+        },
+        "commitHelper.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 10,
+          "maximum": 600,
+          "description": "%config.timeout.desc%"
+        },
+        "commitHelper.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 1.5,
+          "description": "%config.temperature.desc%"
+        },
+        "commitHelper.formatTemplate": {
+          "type": "string",
+          "default": "{subject}\n\n{items}",
+          "description": "%config.formatTemplate.desc%"
+        },
+        "commitHelper.itemLine": {
+          "type": "string",
+          "default": "- [{type}]{scope} {text}",
+          "description": "%config.itemLine.desc%"
+        },
+        "commitHelper.promptTemplate": {
+          "type": "string",
+          "default": "You are an expert at writing git commit messages for the changes below.\nReturn STRICTLY valid JSON only (no Markdown, no commentary):\n{\"subject\":\"one-line summary\",\"items\":[{\"type\":\"feat|fix|refactor|docs|test|chore\",\"scope\":\"optional\",\"text\":\"concrete change\"}],\"issue\":null}\n\nRules:\n- The subject must match Conventional Commits, be at most 72 characters, and have no trailing period.\n- Emit 1-8 items; each item describes a concrete code change (field, enum, API or behaviour), not just a file name.\n- Merge related changes; do not repeat the same file.\n- Use only these types: {types}\n- Write in {language}.\n- Never invent changes that are not present in the diff.\n\nChanged files:\n{fileList}\n\nDiff:\n{diff}",
+          "description": "%config.prompt.desc%"
+        },
+        "commitHelper.commitTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "feat",
+            "fix",
+            "refactor",
+            "docs",
+            "test",
+            "perf",
+            "chore",
+            "ci",
+            "build"
+          ],
+          "description": "%config.types.desc%"
+        }
+      }
+    }
+  }
+}

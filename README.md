@@ -71,6 +71,29 @@ only writes text into the commit message box, and asks before replacing a messag
 
 Install the zip through *Settings | Plugins | ⚙ | Install Plugin from Disk*.
 
+### VS Code extension
+
+The VS Code source lives under `vscode/` and can be packaged independently:
+
+```bash
+cd vscode
+npm install
+npm test
+npm run package
+```
+
+### GitHub Actions publish workflow
+
+`.github/workflows/publish.yml` is a manual (`workflow_dispatch`) publish pipeline with a
+`target` input: `all`, `intellij`, or `vscode`. Configure these repository secrets before using
+the publish steps:
+
+- `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, `PRIVATE_KEY`, `PRIVATE_KEY_PASSWORD` for JetBrains
+- `VSCE_PAT` for VS Code Marketplace
+
+If a secret is missing, the corresponding publish step is skipped and build artifacts are still
+uploaded. Never commit signing material or tokens.
+
 > In restricted networks Gradle cannot reach `services.gradle.org` (it redirects to GitHub).
 > `gradle/wrapper/gradle-wrapper.properties` points at a mirror for that reason; swap the
 > `distributionUrl` back if you prefer the official distribution.

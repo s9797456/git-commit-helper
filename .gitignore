@@ -1,6 +1,8 @@
 .gradle/
 build/
 out/
+vscode/dist/
+vscode/node_modules/
 .verifier-home/
 .intellijPlatform/
 .idea/

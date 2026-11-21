@@ -5,6 +5,20 @@
 
 > **发布前强制检查**：`python3 scripts/check-release-notes.py`。该脚本会扫描 `marketplace/`、README、PUBLISHING、SPEC、plugin.xml 和 build.gradle.kts，发现个人邮箱、账号、密码或 token 值时直接失败。
 
+## GitHub Actions
+
+`.github/workflows/publish.yml` is a manual workflow. Run it from **Actions → Publish → Run workflow**
+and choose `target` (`all`, `intellij` or `vscode`).
+
+Repository secrets used by the workflow:
+
+- `PUBLISH_TOKEN` — JetBrains Marketplace token
+- `CERTIFICATE_CHAIN`, `PRIVATE_KEY`, `PRIVATE_KEY_PASSWORD` — signing material
+- `VSCE_PAT` — VS Code Marketplace token
+
+When a secret is missing the corresponding publish step logs a skip message; the build job still
+produces downloadable artifacts.
+
 ## 0. 现状
 
 | 项 | 状态 |
