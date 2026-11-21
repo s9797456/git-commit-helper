@@ -142,6 +142,13 @@ Settings has five tabs: **General**, **LLM**, **Commit Content**, **Project defa
 The first click on a commit-panel action shows a one-time onboarding notification that opens the
 guide; detected issues produce a session-deduplicated warning. Neither blocks generation.
 
+## Security
+
+Report suspected vulnerabilities through GitHub private vulnerability reporting:
+[Report a vulnerability](https://github.com/s9797456/git-commit-helper/security/advisories/new).
+Do not open a public issue for a security report. See [SECURITY.md](SECURITY.md) for supported
+versions, scope and response targets.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
