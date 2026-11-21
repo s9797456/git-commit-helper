@@ -32,7 +32,7 @@ dependencies {
     }
     // Pure-logic tests never touch platform classes; Gson comes from the platform at runtime,
     // so the tests that do use it get it from Maven Central explicitly.
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testImplementation("com.google.code.gson:gson:2.11.0")
     // BasePlatformTestCase is JUnit 3 style; the vintage engine lets the JUnit Platform run it
     // alongside the plain JUnit 5 logic tests.
