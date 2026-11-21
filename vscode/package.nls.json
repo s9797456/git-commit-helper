@@ -1,5 +1,5 @@
 {
-  "displayName": "Commit Helper",
+  "displayName": "Commit Helper for VS Code",
   "description": "Generate a ready-to-commit message from staged or working-tree changes, with local grouping and optional LLM wording.",
   "category": "Commit Helper",
   "command.generate": "Generate Commit Message",

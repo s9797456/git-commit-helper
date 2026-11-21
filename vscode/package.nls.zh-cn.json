@@ -1,5 +1,5 @@
 {
-  "displayName": "Commit Helper",
+  "displayName": "Commit Helper for VS Code",
   "description": "从已暂存或工作区变更生成本地分组 + 可选 LLM 措辞的提交消息。",
   "category": "Commit Helper",
   "command.generate": "生成提交消息",

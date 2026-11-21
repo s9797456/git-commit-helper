@@ -42,7 +42,7 @@ const manifest = [
   '<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">',
   '  <Metadata>',
   '    <Identity Language="en-US" Id="' + xmlEscape(pkg.name) + '" Version="' + xmlEscape(pkg.version) + '" Publisher="' + xmlEscape(pkg.publisher) + '" />',
-  '    <DisplayName>' + xmlEscape('Commit Helper') + '</DisplayName>',
+  '    <DisplayName>' + xmlEscape('Commit Helper for VS Code') + '</DisplayName>',
   '    <Description xml:space="preserve">' + xmlEscape('Generate a commit message from staged or working-tree changes, with local grouping and optional LLM wording.') + '</Description>',
   '    <Categories>SCM Providers,Other</Categories>',
   '    <GalleryFlags>Public</GalleryFlags>',
