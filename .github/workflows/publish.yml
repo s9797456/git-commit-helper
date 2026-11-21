@@ -86,7 +86,8 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm test
-          npm run package
+          mkdir -p dist
+          npx --yes @vscode/vsce@latest package --out dist/commit-helper-me-tool-0.1.0.vsix
 
       - name: Publish to VS Code Marketplace (Trusted Publishing)
         run: |
