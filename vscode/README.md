@@ -19,7 +19,7 @@
 
 1. 打开扩展视图；
 2. 右上角 `...` → **Install from VSIX...**；
-3. 选择 `dist/commit-helper-0.1.0.vsix`。
+3. 选择 `dist/commit-helper-me-tool-0.1.0.vsix`。
 
 ## 配置
 

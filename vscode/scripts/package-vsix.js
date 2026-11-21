@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const distDir = path.join(root, 'dist');
 fs.mkdirSync(distDir, { recursive: true });
-const vsix = path.join(distDir, 'commit-helper-' + pkg.version + '.vsix');
+const vsix = path.join(distDir, pkg.name + '-' + pkg.version + '.vsix');
 const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'commit-helper-vsix-'));
 const extDir = path.join(staging, 'extension');
 fs.mkdirSync(extDir, { recursive: true });
