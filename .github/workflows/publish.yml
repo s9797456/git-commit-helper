@@ -1,0 +1,104 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to publish
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - intellij
+          - vscode
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  intellij:
+    if: ${{ inputs.target != 'vscode' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test and build
+        run: |
+          ./gradlew test -Pkotlin.compiler.execution.strategy=in-process
+          ./gradlew buildPlugin
+
+      - name: Sign and publish to JetBrains Marketplace
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$PUBLISH_TOKEN" ]; then
+            echo "PUBLISH_TOKEN is not configured; skipping sign/publish."
+            exit 0
+          fi
+          if [ -z "$CERTIFICATE_CHAIN" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "Signing secrets are not configured; skipping sign/publish."
+            exit 0
+          fi
+          ./gradlew signPlugin verifyPluginSignature publishPlugin
+
+      - name: Upload IntelliJ artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: intellij-plugin
+          path: build/distributions/*.zip
+          if-no-files-found: warn
+
+  vscode:
+    if: ${{ inputs.target != 'intellij' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install, test, package
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+          npm run package
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "VSCE_PAT is not configured; skipping VS Code Marketplace publication."
+            exit 0
+          fi
+          VSIX=$(ls dist/commit-helper-*.vsix | head -n 1)
+          npx --yes @vscode/vsce@latest publish --packagePath "$VSIX" -p "$VSCE_PAT"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension
+          path: vscode/dist/*.vsix
+          if-no-files-found: warn
