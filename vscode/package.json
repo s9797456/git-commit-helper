@@ -40,7 +40,7 @@
   "scripts": {
     "test": "node --test",
     "check": "node --check extension.js && node --check src/core.js",
-    "package": "node scripts/package-vsix.js"
+    "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && npx --yes @vscode/vsce@latest package --out dist/commit-helper-me-tool-0.1.0.vsix"
   },
   "contributes": {
     "commands": [
