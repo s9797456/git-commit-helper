@@ -37,7 +37,7 @@ dependencies {
     // BasePlatformTestCase is JUnit 3 style; the vintage engine lets the JUnit Platform run it
     // alongside the plain JUnit 5 logic tests.
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
