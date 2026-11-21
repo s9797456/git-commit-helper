@@ -1,86 +1,132 @@
+<p align="center">
+  <a href="README.md">English</a> ·
+  <strong>简体中文</strong> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
+</p>
+
 # Commit Helper（提交助手）
 
-![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Commit%20Helper-000000?logo=jetbrains\&logoColor=white)
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Commit%20Helper-000000?logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![下载量](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Commit%20Helper-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=me-tool.commit-helper-me-tool)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-![下载量](https://img.shields.io/jetbrains/plugin/d/34303)
+把你**在提交面板里勾选的变更**整理成可直接提交的 commit message：  
+首行摘要 + 按功能分条的正文。
 
-![License](https://img.shields.io/badge/license-Apache--2.0-blue)
+插件采用**本地优先**策略：先做确定性的文件分组，再决定是否调用模型。可选 LLM
+（OpenAI 兼容 / Anthropic / Gemini / 本地模式）只负责措辞；模型不可用时使用本地分组结果，
+不会直接失败。
 
-一个 IntelliJ 平台插件：把你**在提交面板里勾选的变更**整理成可直接提交的 commit message  
-（首行摘要 + 正文分条列出变更项）。
-
-先用本地确定性规则做分组归类，再由可选的大模型（OpenAI 兼容 / Anthropic / Gemini）负责措辞。  
-模型不可用时，插件写入本地分组结果而不是直接失败。
+支持 **IntelliJ Platform 2024.1+** 与 **VS Code 1.90+**。
 
 ## 安装
 
-IDE 内：**Settings | Plugins | Marketplace** 搜索 *Commit Helper*，或打开  
-[JetBrains Marketplace 页面](https://plugins.jetbrains.com/plugin/34303-commit-helper)点 *Install*。  
-插件 ID `com.caye.commithelper`，要求 IntelliJ 平台 2024.1 及以上。
+### IntelliJ Platform
 
-插件页还提供官方 widget（卡片 / 安装按钮），它们需要真实网页才能渲染（GitHub 会过滤 Markdown  
-里的 `<script>`）——`marketplace/widget.html` 就是现成的承载页，上面那排徽章是 GitHub 上的等价做法。
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34303-commit-helper)，插件 ID `com.caye.commithelper`。
+- 或从 [GitHub Releases](https://github.com/s9797456/git-commit-helper/releases/latest) 安装签名 ZIP。
+- IDE 内：**Settings | Plugins | Marketplace** 搜索 **Commit Helper** 安装。
+
+### VS Code
+
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=me-tool.commit-helper-me-tool)，扩展 ID `me-tool.commit-helper-me-tool`。
+- Marketplace 已通过 Trusted Publishing 提交；验证完成前，请从
+  [GitHub Releases](https://github.com/s9797456/git-commit-helper/releases/tag/v0.3.0) 安装 VSIX。
+- VS Code 内：**Extensions → ... → Install from VSIX...**。
 
 ## 功能
 
-- **提交消息框工具栏入口** —— 点 *Organize Commit Message* 才触发，绝不自动发请求。
-- **混合生成** —— 本地按文件/模块确定性分组，模型只做措辞。
-- **可编辑模板** —— 输出格式模板与提示词模板，内置预设可一键套用。
-- **仓库提交模板** —— 读取 `.gitmessage` / `git config commit.template` 作为输出骨架，  
-  注释行原样保留。
-- **Issue 编号注入** —— `{issue}` 从分支名或最近提交中提取，**不调用** Jira/GitHub API。
-- **Changelog 与 PR 描述** —— 仅预览与复制，不写任何仓库文件。
-- **优雅降级** —— 未配 key、超时、HTTP 报错、JSON 解析失败，都会回落为本地分组结果，  
-  并弹出带 *Retry* 按钮的通知。
-- **隐私** —— API key 存在 IDE 凭据库，不写进设置 XML 也不进日志；无任何遥测。
+- **两个 IDE，一套流程** —— IntelliJ 提交面板工具栏与 VS Code 命令面板 / SCM 命令。
+- **本地优先生成** —— 确定性分组、可选模型措辞、模型失败时本地降级。
+- **功能级说明** —— 描述业务能力，而不是逐文件或逐类罗列。
+- **提示词与模板** —— 内置 **Developer Summary**、自定义 Prompt、格式模板、条目行模板和提交类型。
+- **智能拆分（IntelliJ 0.3+）** —— 把勾选变更拆成 1–6 个文件级原子提交。
+- **原生代码对比** —— 在拆分窗口双击文件，打开 IDE 原生 `HEAD` 与工作区 diff。
+- **文件状态颜色** —— 新增、修改、删除、重命名分别着色。
+- **原生 Push** —— 拆分流程打开 IntelliJ 自己的 VCS Push 页面，远端与分支选项保持原生。
+- **Issue 与 CI 辅助** —— 从分支名/最近提交提取 `{issue}`、Skip CI 预设、Changelog 与 PR 描述预览。
+- **四种界面/输出语言** —— English、简体中文、日本語、한국어。
+- **隐私默认** —— API Key 存在 IDE 凭据库，无遥测。
+
+## 智能提交拆分
+
+1. 勾选要拆分的文件。
+2. 点击 **Suggest Commit Split**。
+3. 检查 1–6 个分组；每组包含可编辑消息和文件列表。
+4. 双击文件查看原生 HEAD/工作区 diff。
+5. 点击 **Apply this group** 只会用该组消息提交该组文件；窗口保持打开，继续处理其他组。
+6. 点击 **Push** 打开 IntelliJ 原生 VCS Push 页面。
+
+模型必须把每个勾选文件恰好分到一个组；未知、遗漏或重复文件会拒绝计划。模型输出非法时
+重试一次，之后回退到确定性分组。
+
+> 0.3.0 的智能拆分是**文件级**的，不会拆分同一个文件内部的 hunk。
 
 ## 安全边界
 
-插件**永不执行任何 git 写操作**：不 commit、不 push、不 amend、不 rebase。它只往提交消息框里  
-写文本，且在覆盖你已手写内容前一定会先问你。
+- **Generate Commit Message** 只写入提交消息框。
+- **Apply this group** 在用户明确点击后提交选中的分组。
+- **Push** 交给 IDE 原生 Push 页面；插件不会自行 push。
+- 覆盖你已手写的消息前会先确认。
+- API Key 不会写入设置 XML 或日志。
 
-## 环境要求
+## 快速开始
 
-- IntelliJ Platform 2024.1 及以上（IntelliJ IDEA / PyCharm / Android Studio / WebStorm 等）
-- 一个 git 仓库（依赖内置 `Git4Idea` 插件）
+1. 在 **Settings | Tools | Commit Helper**（IntelliJ）或 **Commit Helper** 设置（VS Code）中
+   配置 Provider 与 API Key。
+2. 勾选本次提交的文件。
+3. 运行 **Generate Commit Message** 或 **Suggest Commit Split**。
+4. 检查并编辑消息，然后用 IDE 提交或推送。
+
+## 配置
+
+| 设置 | 说明 |
+| --- | --- |
+| Provider | OpenAI 兼容 / Anthropic / Gemini / 仅本地 |
+| Base URL / 模型 / API Key | 每个 Provider 独立保存；Key 存入 IDE 凭据库 |
+| Language | English / 中文 / 日本語 / 한국어 / Auto |
+| 格式模板 | `{subject}`、`{items}`、`{issue}`、`{skeleton}`；条目行支持 `{type}`、`{scope}`、`{scopeRaw}`、`{text}` |
+| 提示词模板 | `{language}`、`{format}`、`{skeleton}`、`{diff}`、`{fileList}`；未写的 diff/文件列表会自动追加 |
+| 限额 | 单文件最大行数、总字符预算、附加排除 glob |
+
+二进制、lock 文件、`dist/`、`build/`、`node_modules/`、`*.min.js`、`*.map`、快照等噪声文件
+会在发送前排除；超大 diff 会截断并抽样，提示词中会显式说明已抽样。
+
+## 隐私与安全
+
+- Key 存在 IntelliJ `PasswordSafe` 或 VS Code `SecretStorage`。
+- 只采集勾选变更；diff 会过滤并按预算截断。
+- **仅本地**模式不发起网络请求。
+- 无遥测。
+- 通过 [GitHub 私密漏洞报告](https://github.com/s9797456/git-commit-helper/security/advisories/new) 报告安全问题；
+  详见 [SECURITY.md](SECURITY.md)。
 
 ## 构建
 
 ```bash
-./gradlew buildPlugin        # 产出 build/distributions/*.zip
-./gradlew test               # 纯逻辑单测 + 无头平台测试（Action 注册、设置页、完整管线）
-./gradlew verifyPlugin       # 对 2024.1 / 2024.3 / 2026.2 做兼容性校验
-./gradlew runIde             # 打开沙箱 IDE 做手工冒烟
+# IntelliJ 插件
+./gradlew test
+./gradlew buildPlugin
 ```
 
-通过 *Settings | Plugins | ⚙ | Install Plugin from Disk* 安装该 zip。
+```bash
+# VS Code 扩展
+cd vscode
+npm install
+npm test
+npm run package
+```
 
-> 受限网络下 Gradle 无法访问 `services.gradle.org`（会 307 跳转到 GitHub），  
-> 因此 `gradle/wrapper/gradle-wrapper.properties` 指向了镜像；如无需要可换回官方地址。
->
-> 若 home 目录不可写（沙箱或受限 CI），把 Gradle 目录指到工作区内：  
-> `GRADLE_USER_HOME=<workspace>/.gradle-home ./gradlew test`。  
-> Plugin Verifier 的 home 同理固定在 `<project>/.verifier-home`。
+发布通过 `.github/workflows/publish.yml` 手动触发。IntelliJ 使用签名 secrets 与
+`PUBLISH_TOKEN`；VS Code 使用 OIDC Trusted Publishing，不保存 Marketplace PAT。
 
-## 配置
+## 文档
 
-*Settings | Tools | Commit Helper*。
-
-| 设置项                        | 说明                                                                                              |
-| -------------------------- | ----------------------------------------------------------------------------------------------- |
-| Provider                   | `OpenAI-compatible` / `Anthropic` / `Gemini` / `Local only (no LLM)`                            |
-| Base URL / Model / API key | 每个 provider 独立保存；key 存入 IDE 凭据库                                                                 |
-| Language                   | `中文` / `English` / `Auto (follow repository)`                                                   |
-| 格式模板                       | 占位符 `{subject}` `{items}` `{issue}` `{skeleton}`；条目行可用 `{type}` `{scope}` `{scopeRaw}` `{text}` |
-| 提示词模板                      | 占位符 `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}`；未写的 `{diff}`/`{fileList}` 会自动追加 |
-| 限额                         | 单文件最大行数、总字符预算、附加排除 glob                                                                         |
-
-`{scope}` 有值时渲染为 ` (模块)`（含前导空格），无值时消失；因此  
-`- [{type}]{scope} {text}` 会得到 `- [feat] text` 或 `- [feat] (api) text`。
-
-噪声文件（二进制、lock、`dist/`、`build/`、`node_modules/`、`*.min.js`、`*.map`、快照）在发送前  
-就会被排除；超大 diff 先按单文件截断、再按字符预算抽样，且提示词里会**显式声明抽样**，  
-避免模型把"部分"说成"全部"。
+- [Wiki](https://github.com/s9797456/git-commit-helper/wiki)
+- [Release](https://github.com/s9797456/git-commit-helper/releases)
+- [Roadmap](docs/ROADMAP-0.3.0.md)
 
 ## 许可证
 

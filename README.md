@@ -1,153 +1,136 @@
+<p align="center">
+  <strong>English</strong> ·
+  <a href="README.zh.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
+</p>
+
 # Commit Helper
 
 [![JetBrains Marketplace](https://img.shields.io/badge/JetBrains%20Marketplace-Commit%20Helper-000000?logo=jetbrains&logoColor=white)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/34303)](https://plugins.jetbrains.com/plugin/34303-commit-helper)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Commit%20Helper-007ACC?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=me-tool.commit-helper-me-tool)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-An IntelliJ Platform plugin that turns the changes you checked in the commit panel into a
-ready-to-commit message: a subject line plus an itemized body.
+Commit Helper turns the changes you check in the commit panel into a ready-to-commit message:
+a subject line plus a feature-level body.
 
-Local, deterministic grouping runs first; an optional LLM (OpenAI-compatible, Anthropic or
-Gemini) only handles the wording. If the model is unavailable, the plugin writes the local
-grouping result instead of failing.
+The plugin is **local-first**: deterministic file grouping runs before any model call. An optional
+LLM (OpenAI-compatible, Anthropic, Gemini, or local-only mode) only handles the wording. If the
+model is unavailable, the local grouping result is used instead of failing.
+
+Available for **IntelliJ Platform 2024.1+** and **VS Code 1.90+**.
 
 ## Install
 
-From the IDE: **Settings | Plugins | Marketplace** → search for *Commit Helper*, or open the
-[JetBrains Marketplace page](https://plugins.jetbrains.com/plugin/34303-commit-helper) and click
-*Install*. Plugin ID `com.caye.commithelper`, requires IntelliJ Platform 2024.1 or newer.
+### IntelliJ Platform
 
-The plugin page also ships official widgets (a card and an install button). They need a real web
-page, because GitHub strips `<script>` from Markdown: `marketplace/widget.html` is a ready host
-page for them, while the badges above are the GitHub-friendly equivalent.
+- [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/34303-commit-helper) — plugin ID `com.caye.commithelper`.
+- Or install the signed ZIP from [GitHub Releases](https://github.com/s9797456/git-commit-helper/releases/latest).
+- Open **Settings | Plugins | Marketplace**, search for **Commit Helper**, then install.
+
+### VS Code
+
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=me-tool.commit-helper-me-tool) — extension ID `me-tool.commit-helper-me-tool`.
+- The Marketplace listing was submitted under Trusted Publishing. While verification is pending,
+  install the VSIX from [GitHub Releases](https://github.com/s9797456/git-commit-helper/releases/tag/v0.3.0).
+- In VS Code: **Extensions → ... → Install from VSIX...**.
 
 ## Features
 
-- **Three toolbar actions** — *Generate Commit Message*, *Generate Commit Message with Context*
-  (issue links, notes, Skip CI) and *Format Commit Message*; each can be hidden in settings.
-  Nothing is sent until you click.
-- **Hybrid generation** — deterministic file/module grouping locally, LLM wording on top.
-- **Reusable prompt profiles and commit templates** — CRUD for both, protected built-in
-  *Default* entries, and global/per-project defaults (project defaults live in the fourth
-  settings tab).
-- **In-IDE Guide and configuration self-check** — the last settings tab walks through a 3-step
-  setup, documents every placeholder and flags the common misconfiguration where field labels or
-  `{text}` are pasted into Format template. The first toolbar click shows a one-time pointer to
-  the guide; issues are reported but never block generation.
-- **Responsive settings pages** — pages track the IDE window width, never grow a horizontal
-  scrollbar, and the template editor/preview grows with the dialog.
-- **Commit type management** — keep the allowed types and descriptions used by the model.
-- **Skip CI presets** — configurable markers appended at the end or as a subject prefix.
-- **English, Chinese, Japanese and Korean UI** — follows the IDE locale; generated messages can
-  also be written in Japanese or Korean.
-- **Repository commit template** — `.gitmessage` / `git config commit.template` is used as the
-  output skeleton and its comment lines are preserved.
-- **Issue key injection** — `{issue}` is extracted from the branch name or recent commits
-  (no Jira/GitHub API calls).
-- **Changelog and PR description** — preview and copy only; no files are written.
-- **Graceful degradation** — no key, timeout, HTTP error or malformed JSON falls back to the
-  local grouping result plus a notification with a *Retry* action.
-- **Privacy** — API keys live in the IDE credential store, never in settings XML or logs.
-  No telemetry.
+- **Two IDEs, one workflow** — IntelliJ commit-panel actions and VS Code Command Palette/SCM commands.
+- **Local-first generation** — deterministic grouping, optional LLM wording, local fallback.
+- **Feature-level messages** — business capabilities instead of a list of files or classes.
+- **Prompt profiles and templates** — built-in **Developer Summary**, custom profiles, format templates,
+  item-line templates and commit types.
+- **Smart commit split (IntelliJ 0.3+)** — split a checked change set into 1–6 atomic, file-level groups.
+- **Native code review** — double-click a file in the split dialog to open the IDE's native
+  `HEAD` vs working-tree diff.
+- **Status colors** — added, modified, deleted and renamed files are color-coded.
+- **Native Push** — the split flow opens IntelliJ's own VCS Push page; remote and branch options stay native.
+- **Issue and CI helpers** — `{issue}` extraction from the branch/recent commits, Skip CI presets,
+  changelog/PR description preview.
+- **Four UI/output languages** — English, Simplified Chinese, Japanese, Korean.
+- **Privacy by default** — API keys in the IDE credential store, no telemetry.
 
-## Safety
+## Smart commit split
 
-The plugin never runs a git write operation. It does not commit, push, amend or rebase — it
-only writes text into the commit message box, and asks before replacing a message you wrote.
+1. Check the files you want to split.
+2. Run **Suggest Commit Split**.
+3. Review 1–6 groups; each group has a message and a file list. The message is editable.
+4. Double-click a file to inspect the native HEAD/working-tree diff.
+5. **Apply this group** commits only that group's files with its message; the dialog stays open for the rest.
+6. **Push** opens IntelliJ's native VCS Push page.
 
-## Requirements
+The model must assign every checked file to exactly one group. Unknown, missing or duplicate files
+reject the plan. Invalid output is retried once, then falls back to deterministic grouping.
 
-- IntelliJ Platform 2024.1 or newer (IntelliJ IDEA, PyCharm, Android Studio, WebStorm, …)
-- A git repository (`Git4Idea` is a bundled dependency)
+> Smart split is **file-level** in 0.3.0. It does not split individual hunks inside one file.
+
+## Safety boundaries
+
+- **Generate Commit Message** only writes into the commit message box.
+- **Apply this group** in Smart Split commits the selected group, only after an explicit click.
+- **Push** is delegated to the IDE's native Push page; the plugin does not push by itself.
+- Replacing a message you wrote requires confirmation.
+- API keys are never written to settings XML or logs.
+
+## Quick start
+
+1. Configure a provider and API key in **Settings | Tools | Commit Helper** (IntelliJ) or
+   **Commit Helper** settings (VS Code).
+2. Check the files for the commit.
+3. Run **Generate Commit Message** or **Suggest Commit Split**.
+4. Review and edit the message, then commit or push with the IDE.
+
+## Configuration
+
+| Setting | Meaning |
+| --- | --- |
+| Provider | OpenAI-compatible, Anthropic, Gemini, or Local only |
+| Base URL / model / API key | Per provider; keys are stored in the IDE credential store |
+| Language | English, Chinese, Japanese, Korean, or Auto |
+| Format template | `{subject}`, `{items}`, `{issue}`, `{skeleton}`; item line supports `{type}`, `{scope}`, `{scopeRaw}`, `{text}` |
+| Prompt template | `{language}`, `{format}`, `{skeleton}`, `{diff}`, `{fileList}`; omitted diff/file list is appended automatically |
+| Limits | max lines per file, total character budget, extra exclude globs |
+
+Noise files (binaries, lock files, `dist/`, `build/`, `node_modules/`, `*.min.js`,
+`*.map`, snapshots) are excluded before sending. Oversized diffs are truncated and sampled;
+the prompt states that the diff was sampled.
+
+## Privacy and security
+
+- Keys are stored in IntelliJ `PasswordSafe` or VS Code `SecretStorage`.
+- Only checked changes are collected; the diff is filtered and capped.
+- **Local only** mode makes no network request.
+- No telemetry.
+- Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/s9797456/git-commit-helper/security/advisories/new).
+  See [SECURITY.md](SECURITY.md).
 
 ## Build
 
 ```bash
-./gradlew buildPlugin        # produces build/distributions/*.zip
-./gradlew test               # pure-logic tests + headless platform tests (actions, settings, pipeline)
-./gradlew verifyPlugin       # compatibility check against 2024.1 / 2024.3 / 2026.2
-./gradlew runIde             # sandbox IDE for manual smoke tests
+# IntelliJ plugin
+./gradlew test
+./gradlew buildPlugin
 ```
 
-Install the zip through *Settings | Plugins | ⚙ | Install Plugin from Disk*.
-
-### VS Code extension
-
-The VS Code source lives under `vscode/` and can be packaged independently:
-
 ```bash
+# VS Code extension
 cd vscode
 npm install
 npm test
 npm run package
 ```
 
-### GitHub Actions publish workflow
+Publishing is manual through `.github/workflows/publish.yml`. IntelliJ uses signing secrets and
+`PUBLISH_TOKEN`; VS Code uses OIDC Trusted Publishing and does not store a Marketplace PAT.
 
-`.github/workflows/publish.yml` is a manual (`workflow_dispatch`) publish pipeline with a
-`target` input: `all`, `intellij`, or `vscode`. Configure these repository secrets before using
-the publish steps:
+## Documentation
 
-- `PUBLISH_TOKEN`, `CERTIFICATE_CHAIN`, `PRIVATE_KEY`, `PRIVATE_KEY_PASSWORD` for JetBrains
-- `VSCE_PAT` for VS Code Marketplace
-
-If a secret is missing, the corresponding publish step is skipped and build artifacts are still
-uploaded. Never commit signing material or tokens.
-
-> In restricted networks Gradle cannot reach `services.gradle.org` (it redirects to GitHub).
-> `gradle/wrapper/gradle-wrapper.properties` points at a mirror for that reason; swap the
-> `distributionUrl` back if you prefer the official distribution.
->
-> If your home directory is not writable (sandboxed or locked-down builds), point Gradle at a
-> workspace path: `GRADLE_USER_HOME=<workspace>/.gradle-home ./gradlew test`. The Plugin
-> Verifier keeps its own home in `<project>/.verifier-home` for the same reason.
-
-## Configure
-
-*Settings | Tools | Commit Helper*.
-
-| Setting | Meaning |
-|---|---|
-| Provider | `OpenAI-compatible`, `Anthropic`, `Gemini`, or `Local only (no LLM)` |
-| Base URL / Model / API key | per provider; the key is stored in the IDE credential store |
-| Language | `中文`, `English`, `日本語`, `한국어`, `Auto (follow repository)` |
-| Format template | placeholders `{subject}` `{items}` `{issue}` `{skeleton}`; item line uses `{type}` `{scope}` `{scopeRaw}` `{text}` |
-| Prompt template | placeholders `{language}` `{format}` `{skeleton}` `{diff}` `{fileList}`; omitted `{diff}`/`{fileList}` are appended automatically |
-| Limits | max lines per file, total character budget, extra exclude globs |
-
-`{scope}` renders as ` (module)` (leading space) when a scope exists and vanishes otherwise, so
-`- [{type}]{scope} {text}` yields `- [feat] text` or `- [feat] (api) text`.
-
-Noise files (binaries, lock files, `dist/`, `build/`, `node_modules/`, `*.min.js`, `*.map`,
-snapshots) are excluded before anything is sent. Oversized diffs are truncated per file and
-sampled to the character budget, and the prompt says so explicitly.
-
-[中文说明](README.zh.md)
-
-## Configuration help
-
-Settings has five tabs: **General**, **LLM**, **Commit Content**, **Project defaults** and
-**Guide**. The Guide tab is the in-IDE troubleshooting entry point:
-
-- 3-step setup for language, provider and prompt/template defaults.
-- Placeholder reference for Format template (`{subject}`, `{items}`, `{issue}`,
-  `{skeleton}`) and Item line (`{type}`, `{scope}`, `{scopeRaw}`, `{text}`).
-- The exact field values and a copy button for each. The most common mistake is pasting the
-  labels "Format template:" / "Item line:" or `{text}` into Format template; `{text}` is
-  only replaced in Item line, so it otherwise appears literally or the message goes blank.
-- A live self-check for empty/missing `{items}`, pasted labels, empty Item line, a bullet-prefixed
-  Item line, `.gitmessage` overriding the template and stale project selections. Prompt profiles
-  may omit `{diff}`/`{fileList}`: the plugin appends the checked file list and diff automatically.
-
-The first click on a commit-panel action shows a one-time onboarding notification that opens the
-guide; detected issues produce a session-deduplicated warning. Neither blocks generation.
-
-## Security
-
-Report suspected vulnerabilities through GitHub private vulnerability reporting:
-[Report a vulnerability](https://github.com/s9797456/git-commit-helper/security/advisories/new).
-Do not open a public issue for a security report. See [SECURITY.md](SECURITY.md) for supported
-versions, scope and response targets.
+- [Wiki](https://github.com/s9797456/git-commit-helper/wiki)
+- [Release history](https://github.com/s9797456/git-commit-helper/releases)
+- [Roadmap](docs/ROADMAP-0.3.0.md)
 
 ## License
 
